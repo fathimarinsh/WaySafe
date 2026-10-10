@@ -107,7 +107,7 @@ export async function getIdToken() {
       console.warn('Failed to refresh Supabase session token:', e);
     }
   }
-  return storage.get('auth_token', 'demo-token');
+  return storage.get('auth_token', null);
 }
 
 /**

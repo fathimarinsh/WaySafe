@@ -218,6 +218,7 @@
   <script type="module">
     import { tripsService } from './js/trips.js';
     import { contactsService } from './js/contacts.js';
+    import { requireAuth } from './js/auth.js';
     import { formatDate, escapeHtml, showToast } from './js/app.js';
 
     const urlParams = new URLSearchParams(window.location.search);
@@ -227,6 +228,9 @@
     let currentCheckins = [];
 
     async function init() {
+      const isAuth = await requireAuth();
+      if (!isAuth) return;
+
       if (!tripId) {
         document.getElementById('completion-loading').style.display = 'none';
         document.getElementById('completion-empty').style.display = 'block';
