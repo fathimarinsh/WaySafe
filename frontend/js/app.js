@@ -197,7 +197,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     'trip-status.html',
     'emergency-contacts.html',
     'trip-history.html',
-    'trip-completed.html'
+    'trip-completed.html',
+    'emergency-travel.html',
+    'accessibility-planner.html'
   ];
 
   const authPages = ['login.html', 'signup.html'];

@@ -29,6 +29,8 @@
         <ul class="nav-links">
           <li><a href="dashboard.html" class="nav-link active">Dashboard</a></li>
           <li><a href="trip-setup.html" class="nav-link">Plan Journey</a></li>
+          <li><a href="emergency-travel.html" class="nav-link">Emergency Travel</a></li>
+          <li><a href="accessibility-planner.html" class="nav-link">Accessibility</a></li>
           <li><a href="low-battery.html" class="nav-link">Low-Battery Guide</a></li>
           <li><a href="emergency-contacts.html" class="nav-link">Contacts</a></li>
           <li><a href="trip-history.html" class="nav-link">History</a></li>
@@ -56,6 +58,55 @@
         <a href="trip-setup.html" class="btn btn-primary" id="btn-start-trip">
           <span>🚀</span> Start Safe Trip
         </a>
+      </div>
+    </div>
+
+    <!-- Featured Travel Modes: Emergency Travel Mode & Accessibility Planner Mode -->
+    <div class="card-grid-2" style="margin-bottom: 2rem;" id="featured-travel-modes">
+      <!-- Emergency Travel Mode Card -->
+      <div class="card" id="card-emergency-travel" style="border-left: 4px solid var(--danger-600); display: flex; flex-direction: column; justify-content: space-between;">
+        <div class="card-header" style="background: transparent; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.75rem;">
+          <h2 class="card-title" style="font-size: 1.15rem; color: var(--navy-900);">
+            <span>🛡️</span> Emergency Travel Mode
+          </h2>
+          <span class="badge badge-danger">HIGH CAUTION</span>
+        </div>
+        <div class="card-body" style="flex: 1;">
+          <p style="color: var(--text-secondary); font-size: 0.925rem; line-height: 1.5; margin: 0 0 1.25rem;">
+            Plan a safer journey, monitor available battery information, manage check-ins, and access trusted contacts.
+          </p>
+          <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">
+            ⚡ Hardware Battery Telemetry • 📍 Consensual Check-ins • 👥 Instant SOS SMS
+          </div>
+        </div>
+        <div class="card-footer" style="background: var(--surface-alt); border-top: 1px solid var(--border-subtle); padding: 0.85rem 1.25rem;">
+          <a href="emergency-travel.html" class="btn btn-danger" id="btn-start-emergency-travel" style="width: 100%;">
+            <span>🚨</span> Start Emergency Travel
+          </a>
+        </div>
+      </div>
+
+      <!-- Accessibility Planner Mode Card -->
+      <div class="card" id="card-accessibility-planner" style="border-left: 4px solid var(--teal-600); display: flex; flex-direction: column; justify-content: space-between;">
+        <div class="card-header" style="background: transparent; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.75rem;">
+          <h2 class="card-title" style="font-size: 1.15rem; color: var(--navy-900);">
+            <span>♿</span> Accessibility Planner Mode
+          </h2>
+          <span class="badge badge-teal">INCLUSIVE MOBILITY</span>
+        </div>
+        <div class="card-body" style="flex: 1;">
+          <p style="color: var(--text-secondary); font-size: 0.925rem; line-height: 1.5; margin: 0 0 1.25rem;">
+            Plan a journey around accessibility preferences and available route information.
+          </p>
+          <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">
+            🛗 Step-Free Access • ♿ Wheelchair Ramps • 📢 Visual & Audio Transit Aids
+          </div>
+        </div>
+        <div class="card-footer" style="background: var(--surface-alt); border-top: 1px solid var(--border-subtle); padding: 0.85rem 1.25rem;">
+          <a href="accessibility-planner.html" class="btn btn-primary" id="btn-open-accessibility-planner" style="width: 100%;">
+            <span>♿</span> Open Accessibility Planner
+          </a>
+        </div>
       </div>
     </div>
 
@@ -321,6 +372,8 @@
       </div>
       <ul class="footer-links">
         <li><a href="trip-setup.html">Plan Journey</a></li>
+        <li><a href="emergency-travel.html">Emergency Travel</a></li>
+        <li><a href="accessibility-planner.html">Accessibility Planner</a></li>
         <li><a href="low-battery.html">Battery Guide</a></li>
         <li><a href="emergency-contacts.html">Emergency Contacts</a></li>
         <li><a href="trip-history.html">Trip History</a></li>
