@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WaySafe — Intelligent Travel Safety & Journey Preparation</title>
+  <meta name="description"
+    content="Prepare for journeys, manage trusted contacts, monitor battery health, and stay safe with consensual location check-ins.">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/responsive.css">
+</head>
+
+<body>
+
+  <!-- Shared Navigation -->
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="index.html" class="brand-link" id="brand-link">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24">
+            <path
+              d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z" />
+          </svg>
+        </div>
+        <div class="brand-name">Way<span>Safe</span></div>
+      </a>
+
+      <button class="mobile-nav-toggle" id="mobile-nav-toggle" aria-label="Toggle navigation">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 12h18M3 6h18M3 18h18" />
+        </svg>
+      </button>
+
+      <nav class="main-nav" id="main-nav">
+        <ul class="nav-links">
+          <li><a href="dashboard.html" class="nav-link">Dashboard</a></li>
+          <li><a href="trip-setup.html" class="nav-link">Plan Journey</a></li>
+          <li><a href="low-battery.html" class="nav-link">Low-Battery Guide</a></li>
+          <li><a href="emergency-contacts.html" class="nav-link">Contacts</a></li>
+          <li><a href="trip-history.html" class="nav-link">History</a></li>
+        </ul>
+
+        <div class="nav-auth" id="nav-auth-container">
+          <!-- Populated by app.js based on auth state -->
+          <a href="login.html" class="btn btn-sm btn-outline">Log In</a>
+          <a href="signup.html" class="btn btn-sm btn-primary">Sign Up</a>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <main class="main-content" style="padding-top: 3.5rem;">
+    <div style="max-width: 850px; margin: 0 auto; text-align: center; margin-bottom: 3.5rem;">
+
+      <h1 style="font-size: 3rem; margin-bottom: 1.25rem; line-height: 1.15;">
+        Journey with Confidence.<br><span style="color: var(--teal-600);">Prepared for Any Commute.</span>
+      </h1>
+      <p style="font-size: 1.2rem; color: var(--text-secondary); line-height: 1.6; margin-bottom: 2rem;">
+        WaySafe helps you plan your travel, keep trusted contacts updated with consensual location check-ins, and gives
+        you instant survival protocols when your phone battery is running dangerously low.
+      </p>
+
+      <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+        <a href="dashboard.html" class="btn btn-primary btn-lg" id="btn-hero-dashboard">Open Safe Dashboard →</a>
+        <a href="trip-setup.html" class="btn btn-secondary btn-lg" id="btn-hero-setup">Plan a Journey</a>
+      </div>
+    </div>
+
+    <!-- Features Grid -->
+    <div class="card-grid-3" style="margin-bottom: 4rem;">
+      <div class="card">
+        <div class="card-body">
+          <div style="font-size: 2.25rem; margin-bottom: 0.75rem;">🔋</div>
+          <h3 style="margin-bottom: 0.5rem;">Battery-Aware Safety</h3>
+          <p>
+            Monitors real battery state via browser standards. When your battery drops below 20%, access rapid emergency
+            checklists and one-tap emergency SMS generation with coordinates before your device powers off.
+          </p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-body">
+          <div style="font-size: 2.25rem; margin-bottom: 0.75rem;">🗺️</div>
+          <h3 style="margin-bottom: 0.5rem;">Consensual Live Maps</h3>
+          <p>
+            Powered by OpenStreetMap and Leaflet. Record explicit location check-ins along your route with user-granted
+            GPS consent, with accurate coordinates and reverse-geocoded addresses.
+          </p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-body">
+          <div style="font-size: 2.25rem; margin-bottom: 0.75rem;">👥</div>
+          <h3 style="margin-bottom: 0.5rem;">Trusted Contacts</h3>
+          <p>
+            Organize family and emergency contacts with primary designation. Automatically format clear SMS alerts with
+            your trip destination and OpenStreetMap location links.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Principles Banner (Honest & Transparent) -->
+    <div class="card"
+      style="background-color: var(--surface-card); border-left: 5px solid var(--teal-600); margin-bottom: 3rem;">
+      <div class="card-body">
+        <h3 style="margin-bottom: 0.5rem;">🛡️ Privacy & Technical Honesty First</h3>
+        <p style="margin-bottom: 1rem;">
+          WaySafe is built on transparent, privacy-centric engineering principles:
+        </p>
+        <ul style="list-style: disc; margin-left: 1.5rem; color: var(--text-secondary); line-height: 1.7;">
+          <li><strong>No fabricated numbers:</strong> Battery percentages and GPS coordinates reflect true device
+            sensors or graceful browser fallbacks.</li>
+          <li><strong>Consensual tracking:</strong> We do not claim web apps can track your phone continuously in the
+            background or toggle your phone's hardware battery-saver mode. We provide actionable guides for you to do so
+            safely.</li>
+          <li><strong>Verified delivery:</strong> We generate real pre-composed device SMS and phone calls directly via
+            native device protocols.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Quick Start CTA -->
+    <div
+      style="text-align: center; background: linear-gradient(135deg, var(--navy-900), var(--navy-800)); color: white; padding: 3rem 2rem; border-radius: var(--radius-lg);">
+      <h2 style="color: white; margin-bottom: 0.75rem;">Ready to set up your safe journey?</h2>
+      <p style="color: var(--navy-100); max-width: 600px; margin: 0 auto 1.5rem;">
+        Get started right in your browser. Fully compatible with Firebase Authentication and Firestore security rules.
+      </p>
+      <a href="dashboard.html" class="btn btn-primary btn-lg">Launch WaySafe MVP</a>
+    </div>
+  </main>
+
+  <!-- Shared Footer -->
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div>
+        <div style="font-weight: 700; color: var(--navy-900); margin-bottom: 0.25rem;">WaySafe — Travel Safety MVP</div>
+        <div class="footer-disclaimer">
+          Built for travel preparedness. Uses Firebase Auth, Cloud Firestore, Express REST API, OpenStreetMap, and
+          Leaflet.js.
+        </div>
+      </div>
+      <ul class="footer-links">
+        <li><a href="dashboard.html">Dashboard</a></li>
+        <li><a href="low-battery.html">Low-Battery Guide</a></li>
+        <li><a href="emergency-contacts.html">Contacts</a></li>
+      </ul>
+    </div>
+  </footer>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+
+</html>

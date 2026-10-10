@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create Account — WaySafe</title>
+  <meta name="description" content="Register for a free WaySafe account to secure your travels with battery monitoring and emergency check-ins.">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  <style>
+    .password-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .password-wrapper input {
+      padding-right: 44px;
+    }
+    .btn-toggle-eye {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: transparent;
+      border: none;
+      padding: 6px;
+      cursor: pointer;
+      color: var(--text-muted);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.15s ease;
+    }
+    .btn-toggle-eye:hover,
+    .btn-toggle-eye:focus-visible {
+      color: var(--navy-900);
+      outline: 2px solid var(--teal-500);
+    }
+    .loading-spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: #fff;
+      animation: spin 0.6s linear infinite;
+      margin-right: 8px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Shared Header -->
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="index.html" class="brand-link" id="brand-link">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+        </div>
+        <div class="brand-name">Way<span>Safe</span></div>
+      </a>
+      <div id="nav-auth-container">
+        <a href="login.html" class="btn btn-sm btn-outline">Already registered? Log In</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-content" style="display: flex; align-items: center; justify-content: center; min-height: calc(100vh - 200px);">
+    <div class="card" style="max-width: 480px; width: 100%;">
+      <div class="card-header" style="text-align: center; display: block; border-bottom: none; padding-bottom: 0.5rem;">
+        <div style="display: inline-flex; align-items: center; justify-content: center; width: 52px; height: 52px; background: linear-gradient(135deg, var(--navy-900), var(--teal-600)); color: white; border-radius: var(--radius-md); margin-bottom: 0.75rem; box-shadow: var(--shadow-md);">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+        </div>
+        <h1 style="font-size: 1.65rem; margin-bottom: 0.35rem;">Join WaySafe</h1>
+        <p class="card-subtitle">Set up your safety profile and emergency contacts</p>
+      </div>
+
+      <div class="card-body">
+        <div id="signup-error-alert" class="alert alert-danger" role="alert" style="display: none;"></div>
+        <div id="signup-success-alert" class="alert alert-success" role="status" style="display: none;"></div>
+
+        <form id="signup-form" novalidate>
+          <!-- Full Name -->
+          <div class="form-group">
+            <label class="form-label" for="signup-name">
+              Full Name <span class="required" aria-hidden="true">*</span>
+            </label>
+            <input
+              type="text"
+              id="signup-name"
+              class="form-control"
+              placeholder="Alex Morgan"
+              required
+              autocomplete="name"
+              aria-describedby="name-error"
+            >
+            <div id="name-error" class="form-error" role="alert">Please enter your full name.</div>
+          </div>
+
+          <!-- Email -->
+          <div class="form-group">
+            <label class="form-label" for="signup-email">
+              Email Address <span class="required" aria-hidden="true">*</span>
+            </label>
+            <input
+              type="email"
+              id="signup-email"
+              class="form-control"
+              placeholder="alex@example.com"
+              required
+              autocomplete="email"
+              aria-describedby="email-error"
+            >
+            <div id="email-error" class="form-error" role="alert">Please enter a valid email address.</div>
+          </div>
+
+          <!-- Password with Toggle -->
+          <div class="form-group">
+            <label class="form-label" for="signup-password">
+              Password <span class="required" aria-hidden="true">*</span>
+            </label>
+            <div class="password-wrapper">
+              <input
+                type="password"
+                id="signup-password"
+                class="form-control"
+                placeholder="At least 6 characters"
+                minlength="6"
+                required
+                autocomplete="new-password"
+                aria-describedby="password-error"
+              >
+              <button
+                type="button"
+                id="btn-toggle-password"
+                class="btn-toggle-eye"
+                aria-label="Show password"
+                title="Toggle password visibility"
+              >
+                <svg id="eye-icon-1" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+            <div class="form-hint">At least 6 characters required.</div>
+            <div id="password-error" class="form-error" role="alert">Password must be at least 6 characters long.</div>
+          </div>
+
+          <!-- Confirm Password with Toggle -->
+          <div class="form-group">
+            <label class="form-label" for="signup-confirm-password">
+              Confirm Password <span class="required" aria-hidden="true">*</span>
+            </label>
+            <div class="password-wrapper">
+              <input
+                type="password"
+                id="signup-confirm-password"
+                class="form-control"
+                placeholder="Repeat password"
+                minlength="6"
+                required
+                autocomplete="new-password"
+                aria-describedby="confirm-error"
+              >
+              <button
+                type="button"
+                id="btn-toggle-confirm"
+                class="btn-toggle-eye"
+                aria-label="Show confirmation password"
+                title="Toggle confirm password visibility"
+              >
+                <svg id="eye-icon-2" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+            <div id="confirm-error" class="form-error" role="alert">Passwords do not match.</div>
+          </div>
+
+          <!-- Terms & Privacy Acknowledgement -->
+          <label class="checkbox-group" style="margin-bottom: 1.5rem;">
+            <input type="checkbox" id="signup-terms" required aria-describedby="terms-error">
+            <span class="checkbox-label">
+              I acknowledge and agree to the <strong>Terms of Service</strong> and <strong>Privacy Policy</strong> for travel safety and consent-based location check-ins. <span class="required" aria-hidden="true">*</span>
+            </span>
+          </label>
+          <div id="terms-error" class="form-error" role="alert" style="margin-top: -1rem; margin-bottom: 1rem;">
+            You must agree to the Terms and Privacy Policy to create an account.
+          </div>
+
+          <!-- Submit Button -->
+          <button type="submit" id="btn-signup-submit" class="btn btn-primary btn-block btn-lg">
+            <span id="btn-spinner" class="loading-spinner" style="display: none;"></span>
+            <span id="btn-label">Create Account</span>
+          </button>
+        </form>
+      </div>
+
+      <div class="card-footer" style="justify-content: center; font-size: 0.9rem;">
+        Already have an account?&nbsp;<a href="login.html">Log In</a>
+      </div>
+    </div>
+  </main>
+
+  <script type="module">
+    import { signup, initAuth, getCurrentUser } from './js/auth.js';
+    import { showToast } from './js/app.js';
+
+    const signupForm = document.getElementById('signup-form');
+    const nameInput = document.getElementById('signup-name');
+    const emailInput = document.getElementById('signup-email');
+    const passwordInput = document.getElementById('signup-password');
+    const confirmInput = document.getElementById('signup-confirm-password');
+    const termsCheckbox = document.getElementById('signup-terms');
+    const togglePasswordBtn = document.getElementById('btn-toggle-password');
+    const toggleConfirmBtn = document.getElementById('btn-toggle-confirm');
+    const eyeIcon1 = document.getElementById('eye-icon-1');
+    const eyeIcon2 = document.getElementById('eye-icon-2');
+
+    const errorAlert = document.getElementById('signup-error-alert');
+    const successAlert = document.getElementById('signup-success-alert');
+    const nameError = document.getElementById('name-error');
+    const emailError = document.getElementById('email-error');
+    const passwordError = document.getElementById('password-error');
+    const confirmError = document.getElementById('confirm-error');
+    const termsError = document.getElementById('terms-error');
+
+    const submitBtn = document.getElementById('btn-signup-submit');
+    const btnSpinner = document.getElementById('btn-spinner');
+    const btnLabel = document.getElementById('btn-label');
+
+    // Password Toggle Helper
+    function wirePasswordToggle(button, input, icon) {
+      button.addEventListener('click', () => {
+        const isPassword = input.getAttribute('type') === 'password';
+        input.setAttribute('type', isPassword ? 'text' : 'password');
+        button.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
+        if (isPassword) {
+          icon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
+        } else {
+          icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+        }
+      });
+    }
+
+    wirePasswordToggle(togglePasswordBtn, passwordInput, eyeIcon1);
+    wirePasswordToggle(toggleConfirmBtn, confirmInput, eyeIcon2);
+
+    function setLoading(isLoading) {
+      submitBtn.disabled = isLoading;
+      btnSpinner.style.display = isLoading ? 'inline-block' : 'none';
+      btnLabel.textContent = isLoading ? 'Creating Account...' : 'Create Account';
+    }
+
+    function clearErrors() {
+      errorAlert.style.display = 'none';
+      successAlert.style.display = 'none';
+      nameError.style.display = 'none';
+      emailError.style.display = 'none';
+      passwordError.style.display = 'none';
+      confirmError.style.display = 'none';
+      termsError.style.display = 'none';
+    }
+
+    signupForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearErrors();
+
+      const name = nameInput.value.trim();
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
+      const confirmPassword = confirmInput.value;
+      const termsAccepted = termsCheckbox.checked;
+
+      let hasError = false;
+
+      // 1. Full name validation
+      if (!name) {
+        nameError.style.display = 'block';
+        nameInput.focus();
+        hasError = true;
+      }
+
+      // 2. Email format validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!email || !emailRegex.test(email)) {
+        emailError.style.display = 'block';
+        if (!hasError) emailInput.focus();
+        hasError = true;
+      }
+
+      // 3. Password length validation
+      if (!password || password.length < 6) {
+        passwordError.style.display = 'block';
+        if (!hasError) passwordInput.focus();
+        hasError = true;
+      }
+
+      // 4. Password confirmation match validation
+      if (password !== confirmPassword) {
+        confirmError.style.display = 'block';
+        if (!hasError) confirmInput.focus();
+        hasError = true;
+      }
+
+      // 5. Terms acknowledgement
+      if (!termsAccepted) {
+        termsError.style.display = 'block';
+        hasError = true;
+      }
+
+      if (hasError) return;
+
+      setLoading(true);
+
+      try {
+        const result = await signup(email, password, name);
+
+        if (result && result.requiresEmailConfirmation) {
+          successAlert.innerHTML = `
+            <strong>Account registered!</strong> Please check your inbox at <strong>${email}</strong> to confirm your email before logging in.
+          `;
+          successAlert.style.display = 'block';
+          setLoading(false);
+          submitBtn.disabled = true;
+        } else {
+          showToast('Account created successfully! Redirecting...', 'success');
+          setTimeout(() => {
+            window.location.href = 'dashboard.html';
+          }, 600);
+        }
+      } catch (err) {
+        let msg = err.message || 'Registration failed. Please try again.';
+        if (msg.toLowerCase().includes('already registered') || msg.toLowerCase().includes('user already exists')) {
+          msg = 'An account with this email already exists. Please log in instead.';
+        }
+        errorAlert.textContent = msg;
+        errorAlert.style.display = 'block';
+        setLoading(false);
+      }
+    });
+
+    // Redirect away if already logged in
+    document.addEventListener('DOMContentLoaded', async () => {
+      await initAuth();
+      if (getCurrentUser()) {
+        window.location.href = 'dashboard.html';
+      }
+    });
+  </script>
+</body>
+</html>

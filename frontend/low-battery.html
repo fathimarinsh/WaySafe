@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Low-Battery Safety Protocol — WaySafe</title>
+  <meta name="description" content="Step-by-step low battery safety protocol, explicit location sharing, and emergency contact alerts.">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  <style>
+    .protocol-step-card {
+      background-color: var(--surface-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      transition: border-color 0.15s ease;
+    }
+    .protocol-step-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .step-number-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background-color: var(--navy-900);
+      color: #fff;
+      font-weight: 700;
+      font-size: 0.85rem;
+      margin-right: 0.5rem;
+    }
+    .stale-badge {
+      background-color: var(--warning-100);
+      color: var(--warning-600);
+      padding: 0.2rem 0.5rem;
+      border-radius: var(--radius-full);
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .fresh-badge {
+      background-color: var(--success-100);
+      color: var(--success-600);
+      padding: 0.2rem 0.5rem;
+      border-radius: var(--radius-full);
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .dev-simulator-widget {
+      border: 2px dashed var(--warning-500);
+      background-color: #FFFBEB;
+      border-radius: var(--radius-md);
+      padding: 1rem 1.25rem;
+      margin-bottom: 2rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Shared Header -->
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="index.html" class="brand-link" id="brand-link">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+        </div>
+        <div class="brand-name">Way<span>Safe</span></div>
+      </a>
+
+      <button class="mobile-nav-toggle" id="mobile-nav-toggle" aria-label="Toggle navigation">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+      </button>
+
+      <nav class="main-nav" id="main-nav">
+        <ul class="nav-links">
+          <li><a href="dashboard.html" class="nav-link">Dashboard</a></li>
+          <li><a href="trip-setup.html" class="nav-link">Plan Journey</a></li>
+          <li><a href="low-battery.html" class="nav-link active">Low-Battery Guide</a></li>
+          <li><a href="emergency-contacts.html" class="nav-link">Contacts</a></li>
+          <li><a href="trip-history.html" class="nav-link">History</a></li>
+        </ul>
+
+        <div class="nav-auth" id="nav-auth-container"></div>
+      </nav>
+    </div>
+  </header>
+
+  <main class="main-content">
+    <div class="page-header">
+      <div class="page-header-text">
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+          <span class="badge badge-warning" id="protocol-advisory-badge">POWER CONSERVATION PROTOCOL</span>
+        </div>
+        <h1>Low-Battery Safety Protocol</h1>
+        <p>Preserve device power, record your itinerary, and transmit your location with explicit consent before your battery shuts down.</p>
+      </div>
+      <div class="page-header-actions">
+        <button type="button" id="btn-dismiss-protocol" class="btn btn-outline" title="Dismiss low-battery advisory">
+          ✕ Dismiss Alert
+        </button>
+        <a href="dashboard.html" class="btn btn-secondary">
+          ← Dashboard
+        </a>
+      </div>
+    </div>
+
+    <!-- Developer-Only Battery Simulator Widget (Visibly Labelled, Disabled in Production) -->
+    <div id="dev-simulator-container" class="dev-simulator-widget" style="display: none;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
+        <span style="font-weight: 700; color: var(--navy-900); font-size: 0.9rem;">
+          🛠️ DEVELOPER TESTING: Battery Simulator (Dev Only)
+        </span>
+        <span class="badge badge-warning" id="sim-active-badge">HARDWARE SENSOR ACTIVE</span>
+      </div>
+      <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
+        Test battery thresholds, duplicate-alert suppression, and unsupported states without waiting for real battery depletion. Hidden in production environments.
+      </p>
+      <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        <button type="button" class="btn btn-sm btn-secondary" id="sim-btn-50">🔋 50% (Normal)</button>
+        <button type="button" class="btn btn-sm btn-outline" style="border-color: var(--warning-500); color: var(--warning-600);" id="sim-btn-20">⚠️ 20% (Low Threshold)</button>
+        <button type="button" class="btn btn-sm btn-outline-danger" id="sim-btn-10">🚨 10% (Critical Threshold)</button>
+        <button type="button" class="btn btn-sm btn-danger" id="sim-btn-5">🪫 5% (Emergency SOS)</button>
+        <button type="button" class="btn btn-sm btn-outline" id="sim-btn-unsupported">🚫 Simulate Unsupported API</button>
+        <button type="button" class="btn btn-sm btn-navy" id="sim-btn-reset">🔄 Reset to Real Sensor</button>
+      </div>
+    </div>
+
+    <!-- Primary Quick Actions Hub -->
+    <div class="card" style="margin-bottom: 2rem; background: linear-gradient(135deg, var(--navy-900), var(--navy-800)); color: #fff;">
+      <div class="card-body" style="padding: 1.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+          <div>
+            <h2 style="color: #fff; font-size: 1.35rem; margin-bottom: 0.25rem;">Immediate Emergency Actions</h2>
+            <p style="color: rgba(255, 255, 255, 0.8); font-size: 0.9rem; margin-bottom: 0;">
+              Quick shortcuts to preserve your travel safety before hardware turns off.
+            </p>
+          </div>
+          <div style="display: flex; gap: 0.65rem; flex-wrap: wrap;">
+            <a href="trip-status.html" id="btn-quick-view-trip" class="btn btn-secondary">
+              🗺️ View Active Trip
+            </a>
+            <a href="emergency-contacts.html" class="btn btn-secondary">
+              👥 View Contacts
+            </a>
+            <button type="button" id="btn-quick-share-loc" class="btn btn-primary">
+              📍 Share Location (with Consent)
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Battery Status Card -->
+    <div class="card battery-card" style="margin-bottom: 2rem;">
+      <div class="card-header">
+        <h2 class="card-title" style="font-size: 1.15rem;">
+          <span>🔋</span> Device Power Status
+        </h2>
+        <span class="badge badge-teal" id="protocol-status-badge">ONLINE SENSOR</span>
+      </div>
+      <div class="card-body">
+        <div id="protocol-battery-view">
+          <div class="battery-display">
+            <div>
+              <div class="battery-level-container">
+                <span class="battery-percentage" id="protocol-battery-pct">--%</span>
+              </div>
+              <div class="battery-status-text" id="protocol-battery-detail">
+                Detecting device battery status...
+              </div>
+            </div>
+
+            <div class="battery-shell" aria-hidden="true">
+              <div class="battery-fill" id="protocol-battery-fill" style="width: 50%;"></div>
+            </div>
+          </div>
+
+          <div style="margin-top: 1.25rem; padding-top: 0.75rem; border-top: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; font-size: 0.8rem; color: var(--text-muted);">
+            <span>Low threshold: <strong>&le;20%</strong> • Critical threshold: <strong>&le;10%</strong></span>
+            <span id="sensor-attribution">Read via W3C Battery Status API</span>
+          </div>
+        </div>
+
+        <!-- Unsupported Notice -->
+        <div id="protocol-unsupported-notice" class="alert alert-info" style="display: none; margin-top: 0;">
+          <div style="font-size: 0.85rem; line-height: 1.5;">
+            <strong>Battery Status Unavailable:</strong> Your current browser restricts hardware battery access for anti-fingerprinting privacy. We never fabricate battery numbers. Follow the manual safety checklist below.
+          </div>
+        </div>
+
+        <!-- Browser Sandbox Limitations Notice -->
+        <div class="alert alert-warning" style="margin-top: 1.25rem; margin-bottom: 0;">
+          <div style="font-size: 0.825rem; line-height: 1.45;">
+            <strong>⚠️ Device Sandbox Limitation:</strong> Web browsers operate in a secure sandbox and <strong>cannot programmatically activate the phone's native Battery Saver mode</strong>, nor can web apps reliably track battery or location after the page is closed. Please follow the manual checklist below.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Safety Checklist (Exact 5 Requirements) -->
+    <div class="card" style="margin-bottom: 2rem;">
+      <div class="card-header">
+        <h2 class="card-title" style="font-size: 1.15rem;">
+          <span>🛡️</span> Safety Checklist for Low Power
+        </h2>
+        <span class="badge badge-teal" id="checklist-progress-badge">5 STEPS</span>
+      </div>
+      <div class="card-body">
+        <div class="readiness-list" id="low-power-checklist">
+          <!-- Step 1 -->
+          <div class="readiness-item completed">
+            <span class="step-number-badge">1</span>
+            <div style="flex: 1;">
+              <span class="readiness-label">Enable the phone's built-in Battery Saver</span>
+              <span class="readiness-desc">
+                Manually swipe down for Android Quick Settings &rarr; tap <strong>Battery Saver</strong>, or on iPhone go to <strong>Settings &rarr; Battery &rarr; Low Power Mode</strong>. Dim screen brightness immediately.
+              </span>
+            </div>
+          </div>
+
+          <!-- Step 2 -->
+          <div class="readiness-item" id="checklist-trip-item">
+            <span class="step-number-badge">2</span>
+            <div style="flex: 1;">
+              <span class="readiness-label">Save important trip details</span>
+              <span class="readiness-desc" id="checklist-trip-desc">
+                Checking for active journey details...
+              </span>
+            </div>
+            <a href="trip-status.html" id="btn-checklist-view-trip" class="btn btn-sm btn-secondary" style="margin-left: 0.5rem;">
+              View Trip
+            </a>
+          </div>
+
+          <!-- Step 3 -->
+          <div class="readiness-item">
+            <span class="step-number-badge">3</span>
+            <div style="flex: 1;">
+              <span class="readiness-label">Contact a trusted person when appropriate</span>
+              <span class="readiness-desc">
+                Send a brief update text or call your primary emergency contact before battery level hits critical (&le;10%).
+              </span>
+            </div>
+            <a href="#sms-dispatch-section" class="btn btn-sm btn-secondary" style="margin-left: 0.5rem;">
+              Draft Message
+            </a>
+          </div>
+
+          <!-- Step 4 -->
+          <div class="readiness-item">
+            <span class="step-number-badge">4</span>
+            <div style="flex: 1;">
+              <span class="readiness-label">Share location only with explicit consent</span>
+              <span class="readiness-desc">
+                Transmit your current GPS coordinates to your trip check-in timeline or trusted contact with prior confirmation.
+              </span>
+            </div>
+            <button type="button" id="btn-checklist-share-loc" class="btn btn-sm btn-primary" style="margin-left: 0.5rem;">
+              Share GPS
+            </button>
+          </div>
+
+          <!-- Step 5 -->
+          <div class="readiness-item">
+            <span class="step-number-badge">5</span>
+            <div style="flex: 1;">
+              <span class="readiness-label">Keep emergency contact details accessible</span>
+              <span class="readiness-desc">
+                Memorize or write down primary contact numbers on physical paper in case your phone powers off completely.
+              </span>
+            </div>
+            <a href="emergency-contacts.html" class="btn btn-sm btn-secondary" style="margin-left: 0.5rem;">
+              Contacts
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Location Sharing Module with Explicit Consent -->
+    <div class="card" id="location-sharing-card" style="margin-bottom: 2rem;">
+      <div class="card-header">
+        <h2 class="card-title" style="font-size: 1.15rem;">
+          <span>📍</span> Consensual Location Sharing
+        </h2>
+        <button type="button" id="btn-refresh-gps" class="btn btn-sm btn-outline">
+          🎯 Refresh GPS
+        </button>
+      </div>
+      <div class="card-body">
+        <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1rem;">
+          Acquires your actual latitude and longitude using browser GPS with your explicit permission. Coordinates are never transmitted silently.
+        </p>
+
+        <!-- Location Status Box -->
+        <div style="background-color: var(--surface-alt); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1.25rem; margin-bottom: 1.25rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <div style="font-weight: 700; font-size: 1.1rem; color: var(--navy-900);" id="loc-coords-text">
+              Acquiring coordinates...
+            </div>
+            <span id="loc-freshness-badge" class="stale-badge">CHECKING FRESHNESS</span>
+          </div>
+
+          <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+            <span id="loc-accuracy-text">Accuracy: --</span>
+            <span id="loc-timestamp-text">Last Update: --</span>
+          </div>
+
+          <!-- Safe Map Link generated only from valid coordinates -->
+          <div id="map-link-container">
+            <a href="#" id="valid-map-link" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline" style="display: none;">
+              🗺️ View on OpenStreetMap ↗
+            </a>
+            <span id="map-link-disabled" style="font-size: 0.85rem; color: var(--text-muted);">
+              Map link will generate when valid coordinates are acquired.
+            </span>
+          </div>
+        </div>
+
+        <!-- Location Sharing Action -->
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+          <span style="font-size: 0.85rem; color: var(--text-muted);">
+            Transmits coordinates to your active journey check-in and emergency log.
+          </span>
+          <button type="button" id="btn-trigger-share-loc" class="btn btn-primary">
+            <span>📡</span> Transmit Location with Consent
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rapid Status SMS Dispatch Section -->
+    <div class="card" id="sms-dispatch-section" style="margin-bottom: 2rem;">
+      <div class="card-header">
+        <h2 class="card-title" style="font-size: 1.15rem;">
+          <span>💬</span> Rapid Contact Alert (SMS & Call)
+        </h2>
+        <a href="emergency-contacts.html" class="btn btn-sm btn-outline">+ Manage Contacts</a>
+      </div>
+      <div class="card-body">
+        <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1rem;">
+          Pre-fills an SMS message in your device's native SMS app with your current battery percentage and exact OpenStreetMap coordinates link.
+        </p>
+
+        <div id="sms-contact-list" style="display: flex; flex-direction: column; gap: 0.75rem;">
+          <p style="color: var(--text-muted);">Loading emergency contacts...</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Explicit Location Confirmation Modal -->
+  <div class="modal-backdrop" id="location-confirm-modal">
+    <div class="modal-dialog">
+      <div class="card-header">
+        <h3 class="card-title"><span>📍</span> Confirm Location Sharing</h3>
+        <button type="button" id="btn-close-loc-modal" style="background: none; border: none; font-size: 1.25rem; cursor: pointer;">✕</button>
+      </div>
+      <div class="card-body">
+        <p style="color: var(--text-primary); margin-bottom: 1rem;">
+          Are you sure you want to share your current GPS coordinates with your emergency timeline and contacts?
+        </p>
+        <div style="background-color: var(--surface-alt); padding: 0.85rem 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 1rem; font-size: 0.875rem;">
+          <div><strong>Coordinates:</strong> <span id="modal-confirm-coords">--</span></div>
+          <div><strong>Accuracy:</strong> <span id="modal-confirm-accuracy">--</span></div>
+          <div><strong>Timestamp:</strong> <span id="modal-confirm-time">--</span></div>
+        </div>
+        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0;">
+          WaySafe does not track your location in the background or share it without this explicit confirmation.
+        </p>
+      </div>
+      <div class="card-footer" style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+        <button type="button" id="btn-cancel-share-modal" class="btn btn-secondary">Cancel</button>
+        <button type="button" id="btn-confirm-share-modal" class="btn btn-primary">
+          Confirm & Transmit
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div>
+        <div style="font-weight: 700; color: var(--navy-900);">WaySafe — Low Battery Safety Module</div>
+        <div class="footer-disclaimer">
+          OpenStreetMap coordinates &copy; OpenStreetMap contributors. Client authentication via Supabase Auth.
+        </div>
+      </div>
+      <ul class="footer-links">
+        <li><a href="dashboard.html">Dashboard</a></li>
+        <li><a href="trip-setup.html">Plan Journey</a></li>
+        <li><a href="emergency-contacts.html">Contacts</a></li>
+      </ul>
+    </div>
+  </footer>
+
+  <script type="module" src="js/app.js"></script>
+  
+  <script type="module">
+    import { batteryMonitor } from './js/battery.js';
+    import { locationService } from './js/location.js';
+    import { contactsService } from './js/contacts.js';
+    import { tripsService } from './js/trips.js';
+    import { showToast, escapeHtml } from './js/app.js';
+    import { requireAuth, getCurrentUser, logout } from './js/auth.js';
+
+    let currentBattery = null;
+    let currentLocation = null;
+    let activeTrip = null;
+
+    // 1. Initialize Battery Module
+    async function initBattery() {
+      const pctEl = document.getElementById('protocol-battery-pct');
+      const fillEl = document.getElementById('protocol-battery-fill');
+      const detailEl = document.getElementById('protocol-battery-detail');
+      const badgeEl = document.getElementById('protocol-status-badge');
+      const supportedView = document.getElementById('protocol-battery-view');
+      const unsupportedNotice = document.getElementById('protocol-unsupported-notice');
+
+      const res = await batteryMonitor.init();
+      if (res && res.supported && res.state) {
+        supportedView.style.display = 'block';
+        unsupportedNotice.style.display = 'none';
+        updateBatteryUI(res.state);
+
+        batteryMonitor.onChange(st => {
+          updateBatteryUI(st);
+        });
+      } else {
+        supportedView.style.display = 'none';
+        unsupportedNotice.style.display = 'block';
+        if (badgeEl) {
+          badgeEl.textContent = 'RESTRICTED';
+          badgeEl.className = 'badge badge-neutral';
+        }
+      }
+    }
+
+    function updateBatteryUI(state) {
+      if (!state) return;
+      currentBattery = state;
+
+      const pctEl = document.getElementById('protocol-battery-pct');
+      const fillEl = document.getElementById('protocol-battery-fill');
+      const detailEl = document.getElementById('protocol-battery-detail');
+      const badgeEl = document.getElementById('protocol-status-badge');
+
+      if (pctEl) pctEl.textContent = `${state.level}%`;
+      if (fillEl) {
+        fillEl.style.width = `${Math.min(100, Math.max(5, state.level))}%`;
+        fillEl.classList.remove('battery-low', 'battery-critical');
+        if (state.isCritical) fillEl.classList.add('battery-critical');
+        else if (state.isLow) fillEl.classList.add('battery-low');
+      }
+
+      if (detailEl) {
+        const charging = state.isCharging ? '⚡ Connected to power' : '🔋 On battery discharge';
+        const health = state.isCritical ? '🚨 Critical power (under 10%)' : (state.isLow ? '⚠️ Low power warning (&le;20%)' : 'Healthy charge level');
+        detailEl.textContent = `${charging} • ${health}`;
+      }
+
+      if (badgeEl) {
+        if (state.isCritical) {
+          badgeEl.textContent = 'CRITICAL (<=10%)';
+          badgeEl.className = 'badge badge-danger';
+        } else if (state.isLow) {
+          badgeEl.textContent = 'LOW POWER (<=20%)';
+          badgeEl.className = 'badge badge-warning';
+        } else {
+          badgeEl.textContent = 'MONITORING';
+          badgeEl.className = 'badge badge-teal';
+        }
+      }
+
+      renderSmsList();
+    }
+
+    // 2. Initialize Location Service
+    async function updateLocationUI() {
+      const coordsText = document.getElementById('loc-coords-text');
+      const freshnessBadge = document.getElementById('loc-freshness-badge');
+      const accuracyText = document.getElementById('loc-accuracy-text');
+      const timestampText = document.getElementById('loc-timestamp-text');
+      const validMapLink = document.getElementById('valid-map-link');
+      const mapLinkDisabled = document.getElementById('map-link-disabled');
+
+      if (!locationService.isSupported()) {
+        coordsText.textContent = 'Geolocation not supported by browser';
+        freshnessBadge.textContent = 'UNSUPPORTED';
+        freshnessBadge.className = 'stale-badge';
+        validMapLink.style.display = 'none';
+        mapLinkDisabled.style.display = 'inline';
+        return;
+      }
+
+      try {
+        const pos = await locationService.getCurrentPosition();
+        currentLocation = pos;
+
+        coordsText.textContent = locationService.formatCoordinates(pos.latitude, pos.longitude);
+        accuracyText.textContent = `Accuracy: ±${pos.accuracy}m`;
+        
+        const now = new Date(pos.timestamp);
+        timestampText.textContent = `Last Update: ${now.toLocaleTimeString()}`;
+
+        // Freshness evaluation
+        if (locationService.isStale(pos.timestamp, 5)) {
+          freshnessBadge.textContent = 'STALE (>5m)';
+          freshnessBadge.className = 'stale-badge';
+        } else {
+          freshnessBadge.textContent = 'FRESH (GPS Live)';
+          freshnessBadge.className = 'fresh-badge';
+        }
+
+        // Generate OpenStreetMap URL strictly from valid coordinates
+        const mapUrl = locationService.getMapUrl(pos.latitude, pos.longitude);
+        if (mapUrl) {
+          validMapLink.href = mapUrl;
+          validMapLink.style.display = 'inline-flex';
+          mapLinkDisabled.style.display = 'none';
+        } else {
+          validMapLink.style.display = 'none';
+          mapLinkDisabled.style.display = 'inline';
+        }
+
+        renderSmsList();
+      } catch (err) {
+        coordsText.textContent = 'Location Unavailable';
+        freshnessBadge.textContent = err.code || 'UNAVAILABLE';
+        freshnessBadge.className = 'stale-badge';
+        accuracyText.textContent = `Error: ${err.message}`;
+        validMapLink.style.display = 'none';
+        mapLinkDisabled.style.display = 'inline';
+      }
+    }
+
+    // 3. Load Active Trip Details into Step 2
+    async function loadActiveTripDetails() {
+      const tripDesc = document.getElementById('checklist-trip-desc');
+      const viewTripBtn = document.getElementById('btn-checklist-view-trip');
+      const quickViewBtn = document.getElementById('btn-quick-view-trip');
+
+      try {
+        const trip = await tripsService.getActive();
+        if (trip) {
+          activeTrip = trip;
+          const name = trip.tripName || trip.title || 'Current Trip';
+          const dest = typeof trip.destination === 'object' ? trip.destination.name : trip.destination;
+          const eta = trip.estimatedArrival ? new Date(trip.estimatedArrival).toLocaleTimeString() : 'Flexible';
+          tripDesc.innerHTML = `Active journey saved: <strong>${escapeHtml(name)}</strong> &rarr; <strong>${escapeHtml(dest || 'Destination')}</strong> (ETA: ${eta})`;
+          viewTripBtn.href = `trip-status.html?id=${trip.id}`;
+          quickViewBtn.href = `trip-status.html?id=${trip.id}`;
+        } else {
+          tripDesc.textContent = 'No journey is currently active. Plan or start one from the dashboard.';
+          viewTripBtn.href = 'trip-setup.html';
+          viewTripBtn.textContent = 'Plan Journey';
+          quickViewBtn.href = 'trip-setup.html';
+          quickViewBtn.textContent = '🚀 Plan Journey';
+        }
+      } catch (e) {
+        tripDesc.textContent = 'Could not load active trip information.';
+      }
+    }
+
+    // 4. Render SMS Dispatch List
+    async function renderSmsList() {
+      const container = document.getElementById('sms-contact-list');
+      try {
+        const contacts = await contactsService.list();
+        if (!contacts || contacts.length === 0) {
+          container.innerHTML = `
+            <div style="color: var(--text-muted); font-size: 0.9rem;">
+              No emergency contacts added yet. <a href="emergency-contacts.html">Add trusted contacts</a> to enable one-tap alerts.
+            </div>
+          `;
+          return;
+        }
+
+        container.innerHTML = contacts.map(c => {
+          const emergencyMsg = contactsService.formatEmergencyMessage({
+            contactName: c.name,
+            tripTitle: activeTrip?.tripName || activeTrip?.title || 'Travel Journey',
+            batteryLevel: currentBattery?.level,
+            location: currentLocation,
+            note: 'Low-battery advisory: battery is running low. Sending coordinates link.'
+          });
+
+          const smsLink = contactsService.createSmsLink(c.phone, emergencyMsg);
+          const telLink = contactsService.createTelLink(c.phone);
+
+          return `
+            <div style="background-color: var(--surface-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+              <div>
+                <div style="font-weight: 700; color: var(--navy-900);">
+                  ${escapeHtml(c.name)} ${c.isPrimary ? '<span class="badge badge-teal">PRIMARY</span>' : ''}
+                </div>
+                <div style="font-size: 0.85rem; color: var(--text-muted);">
+                  ${escapeHtml(c.relationship || 'Emergency Contact')} • ${escapeHtml(c.phone)}
+                </div>
+              </div>
+              <div style="display: flex; gap: 0.5rem;">
+                <a href="${smsLink}" class="btn btn-sm btn-navy">
+                  💬 Draft SMS
+                </a>
+                <a href="${telLink}" class="btn btn-sm btn-outline-danger">
+                  📞 Call
+                </a>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (err) {
+        container.innerHTML = `<p style="color: var(--danger-600);">${err.message}</p>`;
+      }
+    }
+
+    // 5. Explicit Location Confirmation Flow
+    function setupLocationConfirmation() {
+      const modal = document.getElementById('location-confirm-modal');
+      const openBtn1 = document.getElementById('btn-quick-share-loc');
+      const openBtn2 = document.getElementById('btn-checklist-share-loc');
+      const openBtn3 = document.getElementById('btn-trigger-share-loc');
+      const closeBtn = document.getElementById('btn-close-loc-modal');
+      const cancelBtn = document.getElementById('btn-cancel-share-modal');
+      const confirmBtn = document.getElementById('btn-confirm-share-modal');
+
+      const modalCoords = document.getElementById('modal-confirm-coords');
+      const modalAccuracy = document.getElementById('modal-confirm-accuracy');
+      const modalTime = document.getElementById('modal-confirm-time');
+
+      function openModal() {
+        if (!currentLocation) {
+          showToast('Acquiring fresh coordinates first...', 'info');
+          updateLocationUI().then(() => {
+            if (currentLocation) openModal();
+            else showToast('Location unavailable. Check device GPS settings.', 'error');
+          });
+          return;
+        }
+
+        modalCoords.textContent = locationService.formatCoordinates(currentLocation.latitude, currentLocation.longitude);
+        modalAccuracy.textContent = `±${currentLocation.accuracy}m`;
+        modalTime.textContent = new Date(currentLocation.timestamp).toLocaleTimeString();
+        modal.classList.add('active');
+      }
+
+      function closeModal() {
+        modal.classList.remove('active');
+      }
+
+      openBtn1?.addEventListener('click', openModal);
+      openBtn2?.addEventListener('click', openModal);
+      openBtn3?.addEventListener('click', openModal);
+      closeBtn?.addEventListener('click', closeModal);
+      cancelBtn?.addEventListener('click', closeModal);
+
+      confirmBtn?.addEventListener('click', async () => {
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = 'Transmitting...';
+
+        try {
+          if (activeTrip) {
+            await tripsService.recordCheckin(activeTrip.id, {
+              type: 'low_battery_warning',
+              batteryLevel: currentBattery ? currentBattery.level : null,
+              battery_level: currentBattery ? currentBattery.level : null,
+              isCharging: currentBattery ? currentBattery.isCharging : false,
+              location: {
+                latitude: currentLocation.latitude,
+                longitude: currentLocation.longitude,
+                accuracy: currentLocation.accuracy
+              },
+              message: 'Low-battery emergency location transmission with explicit consent.'
+            });
+            showToast('Location transmitted to active journey timeline!', 'success');
+          } else {
+            showToast('Location verified with consent. Ready for SMS dispatch.', 'success');
+          }
+          closeModal();
+        } catch (err) {
+          showToast(err.message || 'Failed to record location check-in', 'error');
+        } finally {
+          confirmBtn.disabled = false;
+          confirmBtn.textContent = 'Confirm & Transmit';
+        }
+      });
+    }
+
+    // 6. Dismiss Alert Action
+    document.getElementById('btn-dismiss-protocol')?.addEventListener('click', () => {
+      batteryMonitor.dismissAlert(15);
+      showToast('Low battery advisory dismissed for 15 minutes.', 'info');
+      setTimeout(() => {
+        window.location.href = 'dashboard.html';
+      }, 500);
+    });
+
+    // 7. Developer-Only Simulator Controls (Testing)
+    function setupDeveloperSimulator() {
+      const simContainer = document.getElementById('dev-simulator-container');
+      if (!batteryMonitor.isDevMode()) {
+        simContainer.style.display = 'none';
+        return;
+      }
+
+      simContainer.style.display = 'block';
+      const simBadge = document.getElementById('sim-active-badge');
+
+      function updateSimBadge(label, isSimulated = true) {
+        simBadge.textContent = label;
+        simBadge.className = isSimulated ? 'badge badge-warning' : 'badge badge-teal';
+      }
+
+      document.getElementById('sim-btn-50')?.addEventListener('click', () => {
+        batteryMonitor.simulate(50, false);
+        updateSimBadge('SIMULATED: 50%');
+        showToast('Simulating normal battery (50%)', 'info');
+      });
+
+      document.getElementById('sim-btn-20')?.addEventListener('click', () => {
+        batteryMonitor.simulate(20, false);
+        updateSimBadge('SIMULATED: 20% (LOW)');
+        showToast('Simulating Low Threshold (20%)', 'warning');
+      });
+
+      document.getElementById('sim-btn-10')?.addEventListener('click', () => {
+        batteryMonitor.simulate(10, false);
+        updateSimBadge('SIMULATED: 10% (CRITICAL)');
+        showToast('Simulating Critical Threshold (10%)', 'error');
+      });
+
+      document.getElementById('sim-btn-5')?.addEventListener('click', () => {
+        batteryMonitor.simulate(5, false);
+        updateSimBadge('SIMULATED: 5% (SOS)');
+        showToast('Simulating Emergency Level (5%)', 'error');
+      });
+
+      document.getElementById('sim-btn-unsupported')?.addEventListener('click', () => {
+        batteryMonitor.simulateUnsupportedApi(true);
+        updateSimBadge('SIMULATED: UNSUPPORTED API');
+        initBattery();
+        showToast('Simulating unsupported Battery Status API', 'info');
+      });
+
+      document.getElementById('sim-btn-reset')?.addEventListener('click', () => {
+        batteryMonitor.resetSimulation();
+        updateSimBadge('HARDWARE SENSOR ACTIVE', false);
+        initBattery();
+        showToast('Reset to real hardware battery sensor', 'success');
+      });
+    }
+
+    // Lifecycle Initialization
+    document.addEventListener('DOMContentLoaded', async () => {
+      const isAuth = await requireAuth();
+      if (!isAuth) return;
+
+      const user = getCurrentUser();
+      const authContainer = document.getElementById('nav-auth-container');
+      if (user && authContainer) {
+        const name = user.displayName || user.email?.split('@')[0] || 'Traveler';
+        const initial = (name.charAt(0) || 'U').toUpperCase();
+        authContainer.innerHTML = `
+          <div class="user-pill">
+            <div class="user-avatar">${escapeHtml(initial)}</div>
+            <span>${escapeHtml(name)}</span>
+          </div>
+          <button type="button" id="btn-header-logout" class="btn btn-sm btn-outline">Log Out</button>
+        `;
+        document.getElementById('btn-header-logout')?.addEventListener('click', async () => {
+          await logout();
+          window.location.href = 'login.html';
+        });
+      }
+
+      await Promise.all([
+        initBattery(),
+        updateLocationUI(),
+        loadActiveTripDetails()
+      ]);
+
+      await renderSmsList();
+      setupLocationConfirmation();
+      setupDeveloperSimulator();
+
+      document.getElementById('btn-refresh-gps')?.addEventListener('click', async () => {
+        showToast('Acquiring fresh GPS coordinates...', 'info');
+        await updateLocationUI();
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,33 @@
+{
+  "name": "waysafe-backend",
+  "version": "1.0.0",
+  "description": "WaySafe Travel Safety Web Application - Backend REST API",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node test-supabase-final-integration.js",
+    "test:all": "node test-supabase-final-integration.js && node test-trip-completion-history.js && node test-active-trip-checkins.js && node test-contacts-module.js && node test-battery-location.js",
+    "test:supabase": "node test-supabase-final-integration.js",
+    "test:trips": "node test-trip-completion-history.js",
+    "test:contacts": "node test-contacts-module.js",
+    "test:battery": "node test-battery-location.js"
+  },
+  "keywords": [
+    "waysafe",
+    "travel-safety",
+    "express",
+    "firebase",
+    "firestore"
+  ],
+  "author": "WaySafe Team",
+  "license": "MIT",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.117.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "firebase-admin": "^13.1.0"
+  }
+}

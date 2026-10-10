@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trusted Emergency Contacts — WaySafe</title>
+  <meta name="description" content="Manage your trusted emergency contacts, initiate calls and SMS, and share consensual GPS location with verified individuals.">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  <style>
+    .contact-card-item {
+      background-color: var(--surface-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1.25rem;
+      transition: all 0.15s ease;
+    }
+    .contact-card-item:hover {
+      border-color: var(--teal-500);
+      box-shadow: var(--shadow-sm);
+    }
+    .contact-main-info {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .contact-avatar-circle {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--navy-900), var(--teal-600));
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 1.2rem;
+      flex-shrink: 0;
+    }
+    .contact-btn-group {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .disclaimer-box {
+      background-color: var(--surface-alt);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 1rem 1.25rem;
+      margin-bottom: 2rem;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+    .field-error-text {
+      color: var(--danger-600);
+      font-size: 0.775rem;
+      margin-top: 0.25rem;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Shared Header -->
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="index.html" class="brand-link">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+        </div>
+        <div class="brand-name">Way<span>Safe</span></div>
+      </a>
+
+      <button class="mobile-nav-toggle" id="mobile-nav-toggle" aria-label="Toggle navigation">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+      </button>
+
+      <nav class="main-nav" id="main-nav">
+        <ul class="nav-links">
+          <li><a href="dashboard.html" class="nav-link">Dashboard</a></li>
+          <li><a href="trip-setup.html" class="nav-link">Plan Journey</a></li>
+          <li><a href="low-battery.html" class="nav-link">Low-Battery Guide</a></li>
+          <li><a href="emergency-contacts.html" class="nav-link active">Contacts</a></li>
+          <li><a href="trip-history.html" class="nav-link">History</a></li>
+        </ul>
+
+        <div class="nav-auth" id="nav-auth-container"></div>
+      </nav>
+    </div>
+  </header>
+
+  <main class="main-content">
+    <div class="page-header">
+      <div class="page-header-text">
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+          <span class="badge badge-teal">TRUSTED NETWORK</span>
+        </div>
+        <h1>Trusted Emergency Contacts</h1>
+        <p>Manage family and friends who can receive journey check-ins, phone calls, and consensual location updates.</p>
+      </div>
+
+      <div class="page-header-actions">
+        <button type="button" id="btn-open-add-modal" class="btn btn-primary">
+          <span>+</span> Add Contact
+        </button>
+      </div>
+    </div>
+
+    <!-- Communication Limitation Transparency Notice -->
+    <div class="disclaimer-box">
+      <strong>⚠️ Communication Transparency:</strong> Tapping <strong>Call (tel:)</strong> or <strong>Message (sms:)</strong> triggers your device's native communication app. Browser security sandboxes cannot detect or prove whether a phone call was answered or an SMS was delivered by your cellular carrier.
+    </div>
+
+    <!-- Contacts List Card -->
+    <div class="card" style="margin-bottom: 2rem;">
+      <div class="card-header">
+        <h2 class="card-title" style="font-size: 1.15rem;">
+          <span>👥</span> Your Trusted Network
+        </h2>
+        <span class="badge badge-teal" id="contacts-count-badge">0 CONTACTS</span>
+      </div>
+
+      <div class="card-body" id="contacts-container">
+        <div style="text-align: center; padding: 3rem 1.5rem; color: var(--text-muted);">
+          <span class="loading-spinner" style="border-color: var(--teal-500); border-top-color: transparent;"></span>
+          <p style="margin-top: 0.75rem;">Loading contacts...</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Add/Edit Contact Modal -->
+  <div class="modal-backdrop" id="contact-modal">
+    <div class="modal-dialog">
+      <div class="card-header">
+        <h3 class="card-title" id="modal-title"><span>👤</span> Add Emergency Contact</h3>
+        <button type="button" id="btn-close-modal" class="btn btn-sm btn-outline">✕</button>
+      </div>
+
+      <form id="contact-form" novalidate>
+        <div class="card-body">
+          <input type="hidden" id="contact-id">
+
+          <!-- Contact Name Field -->
+          <div class="form-group">
+            <label class="form-label" for="contact-name">Contact Name <span class="required">*</span></label>
+            <input type="text" id="contact-name" class="form-control" placeholder="e.g. Sarah Connor" required autocomplete="name">
+            <div id="error-contact-name" class="field-error-text">Please enter a valid contact name.</div>
+          </div>
+
+          <!-- Phone Number Field -->
+          <div class="form-group">
+            <label class="form-label" for="contact-phone">Phone Number <span class="required">*</span></label>
+            <input type="tel" id="contact-phone" class="form-control" placeholder="e.g. +1 555-019-2831" required autocomplete="tel">
+            <div id="error-contact-phone" class="field-error-text">Please enter a valid phone number (minimum 5 digits).</div>
+            <div class="form-hint">Used for direct mobile dialer (tel:) and SMS (sms:) links.</div>
+          </div>
+
+          <!-- Optional Relationship Field -->
+          <div class="form-group">
+            <label class="form-label" for="contact-relationship">Relationship (Optional)</label>
+            <input type="text" id="contact-relationship" class="form-control" placeholder="e.g. Sister, Spouse, Friend, Parent" list="relationship-suggestions">
+            <datalist id="relationship-suggestions">
+              <option value="Family / Parent">
+              <option value="Spouse / Partner">
+              <option value="Sister">
+              <option value="Brother">
+              <option value="Friend">
+              <option value="Colleague / Work">
+            </datalist>
+          </div>
+
+          <!-- Optional Primary Checkbox -->
+          <label class="checkbox-group" style="margin-top: 1rem;">
+            <input type="checkbox" id="contact-primary">
+            <span class="checkbox-label">
+              <strong>Set as Primary Contact</strong> (Prioritized during critical alerts)
+            </span>
+          </label>
+        </div>
+
+        <div class="card-footer" style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+          <button type="button" id="btn-cancel-modal" class="btn btn-secondary">Cancel</button>
+          <button type="submit" id="btn-save-contact" class="btn btn-primary">Save Contact</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Consensual Location Sharing Modal for Contact -->
+  <div class="modal-backdrop" id="share-location-modal">
+    <div class="modal-dialog">
+      <div class="card-header" style="background-color: var(--teal-50); border-bottom: 1px solid var(--teal-100);">
+        <h3 class="card-title" style="color: var(--teal-800);">
+          <span>📍</span> Share Location with <span id="share-target-name">Contact</span>
+        </h3>
+        <button type="button" id="btn-close-share-modal" class="btn btn-sm btn-outline">✕</button>
+      </div>
+
+      <div class="card-body">
+        <p style="font-size: 0.9rem; color: var(--navy-900); margin-bottom: 1rem;">
+          WaySafe acquires your actual coordinates using browser GPS only after your consent. Review the live location details below before sharing:
+        </p>
+
+        <div style="background-color: var(--surface-alt); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 1.25rem; font-size: 0.85rem;">
+          <div style="margin-bottom: 0.35rem;">
+            <strong>GPS Coordinates:</strong> <span id="share-coords-text">Acquiring live location...</span>
+          </div>
+          <div style="margin-bottom: 0.35rem;">
+            <strong>Accuracy:</strong> <span id="share-accuracy-text">Measuring...</span>
+          </div>
+          <div style="margin-bottom: 0.35rem;">
+            <strong>Timestamp:</strong> <span id="share-timestamp-text">--</span>
+          </div>
+          <div>
+            <strong>Map Link:</strong> <span id="share-map-link-text" style="word-break: break-all; color: var(--teal-600);">Generating...</span>
+          </div>
+        </div>
+
+        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0;">
+          WaySafe never shares your location silently or in the background without this explicit action.
+        </p>
+      </div>
+
+      <div class="card-footer" style="display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 0.5rem;">
+        <button type="button" id="btn-cancel-share" class="btn btn-secondary">Cancel</button>
+        <button type="button" id="btn-copy-map-link" class="btn btn-outline">📋 Copy Link</button>
+        <button type="button" id="btn-web-share" class="btn btn-navy" style="display: none;">📲 Share via Device</button>
+        <a href="#" id="btn-sms-location-link" class="btn btn-primary">💬 Send SMS</a>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div>
+        <div style="font-weight: 700; color: var(--navy-900);">WaySafe — Emergency Network</div>
+        <div class="footer-disclaimer">
+          All contacts are isolated per authenticated user in Supabase PostgreSQL database.
+        </div>
+      </div>
+      <ul class="footer-links">
+        <li><a href="dashboard.html">Dashboard</a></li>
+        <li><a href="trip-setup.html">Plan Journey</a></li>
+      </ul>
+    </div>
+  </footer>
+
+  <script type="module" src="js/app.js"></script>
+
+  <script type="module">
+    import { contactsService } from './js/contacts.js';
+    import { locationService } from './js/location.js';
+    import { showToast, escapeHtml } from './js/app.js';
+    import { requireAuth, getCurrentUser, logout } from './js/auth.js';
+
+    let contacts = [];
+    let currentShareContact = null;
+    let currentShareLocation = null;
+
+    const modal = document.getElementById('contact-modal');
+    const form = document.getElementById('contact-form');
+    const shareModal = document.getElementById('share-location-modal');
+
+    // 1. Load Contacts List
+    async function loadContacts() {
+      const container = document.getElementById('contacts-container');
+      const badge = document.getElementById('contacts-count-badge');
+
+      try {
+        contacts = await contactsService.list();
+        badge.textContent = `${contacts.length} CONTACTS`;
+
+        if (!contacts || contacts.length === 0) {
+          container.innerHTML = `
+            <div style="text-align: center; padding: 3rem 1.5rem;">
+              <div style="font-size: 2.75rem; margin-bottom: 0.75rem;">👥</div>
+              <h3 style="margin-bottom: 0.5rem; color: var(--navy-900);">No Contacts Added Yet</h3>
+              <p style="color: var(--text-muted); max-width: 420px; margin: 0 auto 1.5rem; font-size: 0.9rem;">
+                Add trusted family members or friends who can be reached with one tap during your travel journeys or low-battery alerts.
+              </p>
+              <button type="button" class="btn btn-primary" onclick="document.getElementById('btn-open-add-modal').click()">
+                + Add Your First Contact
+              </button>
+            </div>
+          `;
+          return;
+        }
+
+        container.innerHTML = contacts.map(c => {
+          const initial = (c.name.charAt(0) || 'C').toUpperCase();
+          const telLink = contactsService.createTelLink(c.phone);
+          const defaultSmsMsg = `[WaySafe Travel Check-in] Hi ${c.name}, checking in with you via WaySafe.`;
+          const smsLink = contactsService.createSmsLink(c.phone, defaultSmsMsg);
+
+          return `
+            <div class="contact-card-item">
+              <div class="contact-main-info">
+                <div class="contact-avatar-circle">${escapeHtml(initial)}</div>
+                <div>
+                  <div style="font-weight: 700; color: var(--navy-900); display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                    <span style="font-size: 1.05rem;">${escapeHtml(c.name)}</span>
+                    ${c.isPrimary ? '<span class="badge badge-teal">PRIMARY</span>' : ''}
+                  </div>
+                  <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                    <strong>${escapeHtml(c.relationship || 'Emergency Contact')}</strong> • 
+                    <span style="color: var(--navy-800);">${escapeHtml(c.phone)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="contact-btn-group">
+                <a href="${telLink}" class="btn btn-sm btn-secondary" title="Direct Phone Call">
+                  📞 Call
+                </a>
+                <a href="${smsLink}" class="btn btn-sm btn-secondary" title="Send SMS">
+                  💬 Message
+                </a>
+                <button type="button" class="btn btn-sm btn-primary btn-share-loc" data-id="${c.id}" title="Acquire and share live GPS location with consent">
+                  📍 Share Location
+                </button>
+                <button type="button" class="btn btn-sm btn-outline btn-edit-contact" data-id="${c.id}">
+                  Edit
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-danger btn-delete-contact" data-id="${c.id}">
+                  Delete
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        // Wire Action Handlers
+        document.querySelectorAll('.btn-edit-contact').forEach(btn => {
+          btn.addEventListener('click', () => editContact(btn.getAttribute('data-id')));
+        });
+
+        document.querySelectorAll('.btn-delete-contact').forEach(btn => {
+          btn.addEventListener('click', () => deleteContact(btn.getAttribute('data-id')));
+        });
+
+        document.querySelectorAll('.btn-share-loc').forEach(btn => {
+          btn.addEventListener('click', () => openLocationShareModal(btn.getAttribute('data-id')));
+        });
+
+      } catch (err) {
+        console.error('Failed to load contacts:', err);
+        container.innerHTML = `<p style="padding: 1.5rem; color: var(--danger-600);">${err.message}</p>`;
+      }
+    }
+
+    // 2. Add / Edit Modal Logic
+    function openModal(isEdit = false) {
+      document.getElementById('modal-title').innerHTML = isEdit 
+        ? '<span>✏️</span> Edit Contact' 
+        : '<span>👤</span> Add Emergency Contact';
+      clearErrors();
+      modal.classList.add('active');
+    }
+
+    function closeModal() {
+      modal.classList.remove('active');
+      form.reset();
+      document.getElementById('contact-id').value = '';
+      clearErrors();
+    }
+
+    function clearErrors() {
+      document.getElementById('error-contact-name').style.display = 'none';
+      document.getElementById('error-contact-phone').style.display = 'none';
+    }
+
+    function editContact(id) {
+      const contact = contacts.find(c => c.id === id);
+      if (!contact) return;
+
+      document.getElementById('contact-id').value = contact.id;
+      document.getElementById('contact-name').value = contact.name || '';
+      document.getElementById('contact-phone').value = contact.phone || '';
+      document.getElementById('contact-relationship').value = contact.relationship || '';
+      document.getElementById('contact-primary').checked = Boolean(contact.isPrimary);
+
+      openModal(true);
+    }
+
+    async function deleteContact(id) {
+      const contact = contacts.find(c => c.id === id);
+      const name = contact ? contact.name : 'this contact';
+      if (!confirm(`Are you sure you want to remove ${name} from your trusted emergency contacts?`)) return;
+
+      try {
+        await contactsService.delete(id);
+        showToast('Contact removed successfully.', 'info');
+        await loadContacts();
+      } catch (err) {
+        showToast(err.message || 'Failed to remove contact', 'error');
+      }
+    }
+
+    // Form Client-Side Validation & Submission
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearErrors();
+
+      const nameInput = document.getElementById('contact-name');
+      const phoneInput = document.getElementById('contact-phone');
+      const relationshipInput = document.getElementById('contact-relationship');
+      const primaryInput = document.getElementById('contact-primary');
+      const saveBtn = document.getElementById('btn-save-contact');
+
+      const name = nameInput.value.trim();
+      const phone = phoneInput.value.trim();
+      const relationship = relationshipInput.value.trim();
+      const isPrimary = primaryInput.checked;
+
+      let isValid = true;
+
+      // Client validation: Name
+      if (!name) {
+        document.getElementById('error-contact-name').style.display = 'block';
+        nameInput.focus();
+        isValid = false;
+      }
+
+      // Client validation: Phone (at least 5 digits)
+      const cleanPhone = phone.replace(/[\s\-\(\)\+]/g, '');
+      if (!phone || cleanPhone.length < 5) {
+        document.getElementById('error-contact-phone').style.display = 'block';
+        if (isValid) phoneInput.focus();
+        isValid = false;
+      }
+
+      if (!isValid) return;
+
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving...';
+
+      const id = document.getElementById('contact-id').value;
+      const payload = {
+        name,
+        phone,
+        relationship: relationship || 'Emergency Contact',
+        isPrimary,
+        is_primary: isPrimary
+      };
+
+      try {
+        if (id) {
+          await contactsService.update(id, payload);
+          showToast('Contact updated successfully!', 'success');
+        } else {
+          await contactsService.add(payload);
+          showToast('Emergency contact added successfully!', 'success');
+        }
+        closeModal();
+        await loadContacts();
+      } catch (err) {
+        showToast(err.message || 'Error saving contact', 'error');
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Contact';
+      }
+    });
+
+    // =========================================================================
+    // 3. Consensual Location Sharing for Contact
+    // =========================================================================
+    async function openLocationShareModal(contactId) {
+      currentShareContact = contacts.find(c => c.id === contactId);
+      if (!currentShareContact) return;
+
+      document.getElementById('share-target-name').textContent = currentShareContact.name;
+      const coordsText = document.getElementById('share-coords-text');
+      const accuracyText = document.getElementById('share-accuracy-text');
+      const timestampText = document.getElementById('share-timestamp-text');
+      const mapLinkText = document.getElementById('share-map-link-text');
+      const smsLinkBtn = document.getElementById('btn-sms-location-link');
+      const webShareBtn = document.getElementById('btn-web-share');
+
+      coordsText.textContent = 'Acquiring GPS location with your permission...';
+      accuracyText.textContent = 'Measuring accuracy...';
+      timestampText.textContent = '--';
+      mapLinkText.textContent = 'Generating link...';
+
+      // Show/hide Web Share API button depending on browser capability
+      if (typeof navigator !== 'undefined' && navigator.share) {
+        webShareBtn.style.display = 'inline-flex';
+      } else {
+        webShareBtn.style.display = 'none';
+      }
+
+      shareModal.classList.add('active');
+
+      try {
+        const pos = await locationService.getCurrentPosition();
+        currentShareLocation = pos;
+
+        coordsText.textContent = locationService.formatCoordinates(pos.latitude, pos.longitude);
+        accuracyText.textContent = `±${pos.accuracy}m`;
+        const timeStr = new Date(pos.timestamp).toLocaleTimeString();
+        timestampText.textContent = timeStr;
+
+        const mapUrl = locationService.getMapUrl(pos.latitude, pos.longitude);
+        mapLinkText.textContent = mapUrl;
+
+        // Pre-fill SMS link
+        const smsMessage = `[WaySafe Location Update] Hi ${currentShareContact.name}, here is my current verified location: ${mapUrl} (Accuracy ~${pos.accuracy}m at ${timeStr}).`;
+        smsLinkBtn.href = contactsService.createSmsLink(currentShareContact.phone, smsMessage);
+
+      } catch (err) {
+        coordsText.textContent = `Location Unavailable (${err.code || 'ERROR'})`;
+        accuracyText.textContent = err.message || 'Permission denied or GPS unavailable';
+        mapLinkText.textContent = 'Cannot generate map link without valid coordinates.';
+        showToast(err.message || 'Location permission was denied', 'error');
+      }
+    }
+
+    function closeShareModal() {
+      shareModal.classList.remove('active');
+      currentShareContact = null;
+      currentShareLocation = null;
+    }
+
+    // Copy Map Link fallback
+    document.getElementById('btn-copy-map-link')?.addEventListener('click', async () => {
+      if (!currentShareLocation) {
+        showToast('Valid coordinates required to copy link', 'warning');
+        return;
+      }
+      const mapUrl = locationService.getMapUrl(currentShareLocation.latitude, currentShareLocation.longitude);
+      try {
+        await navigator.clipboard.writeText(mapUrl);
+        showToast('OpenStreetMap location link copied to clipboard!', 'success');
+      } catch (e) {
+        showToast('Failed to copy. Please manually copy the link shown.', 'error');
+      }
+    });
+
+    // Native Web Share API
+    document.getElementById('btn-web-share')?.addEventListener('click', async () => {
+      if (!currentShareLocation || !currentShareContact) return;
+      const mapUrl = locationService.getMapUrl(currentShareLocation.latitude, currentShareLocation.longitude);
+      const text = `Hi ${currentShareContact.name}, here is my current verified location from WaySafe: ${mapUrl}`;
+
+      try {
+        await navigator.share({
+          title: 'WaySafe Verified Location',
+          text: text,
+          url: mapUrl
+        });
+        showToast('Location shared via device app!', 'success');
+        closeShareModal();
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          showToast(err.message || 'Sharing was cancelled', 'info');
+        }
+      }
+    });
+
+    // Modal Triggers
+    document.getElementById('btn-open-add-modal')?.addEventListener('click', () => openModal(false));
+    document.getElementById('btn-close-modal')?.addEventListener('click', closeModal);
+    document.getElementById('btn-cancel-modal')?.addEventListener('click', closeModal);
+    document.getElementById('btn-close-share-modal')?.addEventListener('click', closeShareModal);
+    document.getElementById('btn-cancel-share')?.addEventListener('click', closeShareModal);
+
+    // Lifecycle
+    document.addEventListener('DOMContentLoaded', async () => {
+      const isAuth = await requireAuth();
+      if (!isAuth) return;
+
+      const user = getCurrentUser();
+      const authContainer = document.getElementById('nav-auth-container');
+      if (user && authContainer) {
+        const name = user.displayName || user.email?.split('@')[0] || 'Traveler';
+        const initial = (name.charAt(0) || 'U').toUpperCase();
+        authContainer.innerHTML = `
+          <div class="user-pill">
+            <div class="user-avatar">${escapeHtml(initial)}</div>
+            <span>${escapeHtml(name)}</span>
+          </div>
+          <button type="button" id="btn-header-logout" class="btn btn-sm btn-outline">Log Out</button>
+        `;
+        document.getElementById('btn-header-logout')?.addEventListener('click', async () => {
+          await logout();
+          window.location.href = 'login.html';
+        });
+      }
+
+      await loadContacts();
+    });
+  </script>
+</body>
+</html>
