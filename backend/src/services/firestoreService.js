@@ -401,5 +401,40 @@ export const firestoreService = {
     const checkinsRef = tripRef.collection('checkins');
     const snapshot = await checkinsRef.orderBy('createdAt', 'desc').get();
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  },
+
+  async findTripByShareToken(shareToken) {
+    if (!shareToken) return null;
+    if (isMockMode || !db) {
+      for (const [userId, userStore] of Object.entries(mockStore.users)) {
+        for (const [tripId, trip] of userStore.trips.entries()) {
+          const tToken = trip.share_token || trip.shareToken;
+          if (tToken === shareToken) {
+            let contact = null;
+            const contactId = trip.trusted_contact_id || trip.trustedContactId;
+            if (contactId && userStore.contacts.has(contactId)) {
+              contact = userStore.contacts.get(contactId);
+            }
+            let latestCheckin = null;
+            const checkinsMap = userStore.checkins.get(tripId);
+            if (checkinsMap && checkinsMap.size > 0) {
+              const list = Array.from(checkinsMap.values()).sort((a, b) => new Date(b.checked_in_at || b.createdAt || b.created_at || 0) - new Date(a.checked_in_at || a.createdAt || a.created_at || 0));
+              latestCheckin = list.find(c => c.latitude !== null && c.latitude !== undefined);
+            }
+            return { trip, contact, latestCheckin, userId };
+          }
+        }
+      }
+      return null;
+    }
+
+    // Firestore query if live
+    const snapshot = await db.collectionGroup('trips').where('share_token', '==', shareToken).limit(1).get();
+    if (snapshot.empty) return null;
+    const doc = snapshot.docs[0];
+    const trip = { id: doc.id, ...doc.data() };
+    const userId = doc.ref.parent.parent.id;
+    return { trip, contact: null, latestCheckin: null, userId };
   }
 };
+

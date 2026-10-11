@@ -54,6 +54,14 @@ function mapTrip(row) {
     last_check_in_at: row.last_check_in_at,
     checkinCount: checkins,
     checkin_count: checkins,
+    shareToken: row.share_token || row.shareToken || null,
+    share_token: row.share_token || row.shareToken || null,
+    shareTokenExpiresAt: row.share_token_expires_at || row.shareTokenExpiresAt || null,
+    share_token_expires_at: row.share_token_expires_at || row.shareTokenExpiresAt || null,
+    shareSettings: row.share_settings || row.shareSettings || null,
+    share_settings: row.share_settings || row.shareSettings || null,
+    shareRevoked: Boolean(row.share_revoked ?? row.shareRevoked ?? false),
+    share_revoked: Boolean(row.share_revoked ?? row.shareRevoked ?? false),
     createdAt: row.created_at,
     created_at: row.created_at,
     updatedAt: row.updated_at,
@@ -328,6 +336,32 @@ export const tripsService = {
       const res = await api.checkins.listForTrip(tripId);
       return res.data || [];
     }
+  },
+
+  // Emergency Trip QR Code & Public Sharing
+  async getShareToken(tripId) {
+    const res = await api.trips.getShareToken(tripId);
+    return res.data;
+  },
+
+  async generateShareToken(tripId, options = {}) {
+    const res = await api.trips.generateShareToken(tripId, options);
+    return res.data;
+  },
+
+  async revokeShareToken(tripId) {
+    const res = await api.trips.revokeShareToken(tripId);
+    return res;
+  },
+
+  async updateShareSettings(tripId, settings) {
+    const res = await api.trips.updateShareSettings(tripId, settings);
+    return res.data;
+  },
+
+  async getPublicShare(token) {
+    const res = await api.trips.getPublicShare(token);
+    return res.data;
   },
 
   // UI Helpers

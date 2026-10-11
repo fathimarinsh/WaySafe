@@ -75,6 +75,12 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify({ status, ...extra })
     }),
+    // Emergency Trip Sharing and QR Code Methods
+    getShareToken: (id) => request(`/trips/${id}/share-token`, { method: 'GET' }),
+    generateShareToken: (id, options = {}) => request(`/trips/${id}/share-token/generate`, { method: 'POST', body: JSON.stringify(options) }),
+    revokeShareToken: (id) => request(`/trips/${id}/share-token/revoke`, { method: 'POST' }),
+    updateShareSettings: (id, settings) => request(`/trips/${id}/share-token/settings`, { method: 'PATCH', body: JSON.stringify(settings) }),
+    getPublicShare: (token) => request(`/trips/public/${encodeURIComponent(token)}`, { method: 'GET' }),
     delete: (id) => request(`/trips/${id}`, { method: 'DELETE' })
   },
 

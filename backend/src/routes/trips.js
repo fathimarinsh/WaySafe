@@ -12,12 +12,24 @@ import {
   updateTripStatus,
   deleteTrip,
   createTripCheckin,
-  listTripCheckins
+  listTripCheckins,
+  getPublicEmergencyTrip,
+  getPublicEmergencyTripQr,
+  getTripShareToken,
+  generateTripShareToken,
+  revokeTripShareToken,
+  updateTripShareSettings,
+  getTripQrCode
 } from '../controllers/tripsController.js';
 
 const router = Router();
 
-// All trip endpoints require a verified Supabase access token
+// Public Emergency Trip Sharing Endpoints (No authentication required)
+// Anyone scanning the QR code can access the public emergency trip page
+router.get('/public/:token', getPublicEmergencyTrip);
+router.get('/public/:token/qr', getPublicEmergencyTripQr);
+
+// All subsequent trip endpoints require a verified Supabase access token
 router.use(authenticate);
 
 // GET /api/trips - list user trips
@@ -25,6 +37,13 @@ router.get('/', listTrips);
 
 // GET /api/trips/active - get current active trip
 router.get('/active', getActiveTrip);
+
+// Emergency Trip Sharing & QR Code Management (Authenticated Owner)
+router.get('/:id/share-token', getTripShareToken);
+router.post('/:id/share-token/generate', generateTripShareToken);
+router.post('/:id/share-token/revoke', revokeTripShareToken);
+router.patch('/:id/share-token/settings', updateTripShareSettings);
+router.get('/:id/qr', getTripQrCode);
 
 // GET /api/trips/:id - get trip by id
 router.get('/:id', getTripById);
@@ -54,3 +73,4 @@ router.patch('/:id/status', validateUpdateTripStatus, updateTripStatus);
 router.delete('/:id', deleteTrip);
 
 export default router;
+

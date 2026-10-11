@@ -1,3 +1,5 @@
+import crypto from 'crypto';
+import QRCode from 'qrcode';
 import { firestoreService } from '../services/firestoreService.js';
 import { isSupabaseConfigured, getUserClient, supabaseAdmin } from '../config/supabase.js';
 
@@ -37,6 +39,14 @@ function mapTripRow(row) {
     last_check_in_at: row.last_check_in_at,
     checkinCount: row.checkin_count ?? row.checkinCount ?? 0,
     checkin_count: row.checkin_count ?? row.checkinCount ?? 0,
+    shareToken: row.share_token || row.shareToken || null,
+    share_token: row.share_token || row.shareToken || null,
+    shareTokenExpiresAt: row.share_token_expires_at || row.shareTokenExpiresAt || null,
+    share_token_expires_at: row.share_token_expires_at || row.shareTokenExpiresAt || null,
+    shareSettings: row.share_settings || row.shareSettings || { share_location: true, share_contact: true, share_eta: true, display_name: '' },
+    share_settings: row.share_settings || row.shareSettings || { share_location: true, share_contact: true, share_eta: true, display_name: '' },
+    shareRevoked: Boolean(row.share_revoked ?? row.shareRevoked ?? false),
+    share_revoked: Boolean(row.share_revoked ?? row.shareRevoked ?? false),
     createdAt: row.created_at,
     created_at: row.created_at,
     updatedAt: row.updated_at,
@@ -121,6 +131,10 @@ export async function createTrip(req, res, next) {
       started_at: startedAt,
       completed_at: null,
       last_check_in_at: status === 'active' ? now : null,
+      share_token: body.share_token || crypto.randomBytes(20).toString('hex'),
+      share_token_expires_at: body.share_token_expires_at || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      share_settings: body.share_settings || { share_location: true, share_contact: true, share_eta: true, display_name: '' },
+      share_revoked: false,
       created_at: now,
       updated_at: now
     };
@@ -582,10 +596,18 @@ export async function startTrip(req, res, next) {
     }
 
     const now = new Date().toISOString();
+    const shareToken = existing.share_token || existing.shareToken || crypto.randomBytes(20).toString('hex');
+    const shareExpiresAt = existing.share_token_expires_at || existing.shareTokenExpiresAt || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+    const shareSettings = existing.share_settings || existing.shareSettings || { share_location: true, share_contact: true, share_eta: true, display_name: '' };
+
     const updates = {
       status: 'active',
       started_at: existing.started_at || now,
       last_check_in_at: now,
+      share_token: shareToken,
+      share_token_expires_at: shareExpiresAt,
+      share_settings: shareSettings,
+      share_revoked: false,
       updated_at: now
     };
 
@@ -914,10 +936,15 @@ export async function createTripCheckin(req, res, next) {
     let acc = null;
     let locObj = null;
 
-    if (hasConsent && body.location) {
-      const candidateLat = body.location.latitude ?? body.latitude;
-      const candidateLng = body.location.longitude ?? body.longitude;
-      const candidateAcc = body.location.accuracy ?? body.accuracy;
+    const hasLocation = Boolean(
+      body.location ||
+      (typeof body.latitude === 'number' && typeof body.longitude === 'number')
+    );
+
+    if (hasConsent && hasLocation) {
+      const candidateLat = (body.location && body.location.latitude !== undefined) ? body.location.latitude : body.latitude;
+      const candidateLng = (body.location && body.location.longitude !== undefined) ? body.location.longitude : body.longitude;
+      const candidateAcc = (body.location && body.location.accuracy !== undefined) ? body.location.accuracy : (body.accuracy ?? null);
 
       if (typeof candidateLat === 'number' && typeof candidateLng === 'number' &&
           !isNaN(candidateLat) && !isNaN(candidateLng) &&
@@ -1158,3 +1185,520 @@ export async function listTripCheckins(req, res, next) {
     next(error);
   }
 }
+
+/**
+ * GET /api/trips/public/:token
+ * Public unauthenticated endpoint for Emergency QR Code scanning
+ */
+export async function getPublicEmergencyTrip(req, res, next) {
+  try {
+    const { token } = req.params;
+    if (!token || typeof token !== 'string' || token.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid or missing emergency sharing token.'
+      });
+    }
+
+    const cleanToken = token.trim();
+
+    // 1. Supabase attempt (RPC or table query)
+    if (isSupabaseConfigured && supabaseAdmin) {
+      try {
+        // Try RPC first
+        const { data: rpcData, error: rpcErr } = await supabaseAdmin.rpc('get_public_emergency_trip', { p_share_token: cleanToken });
+        if (!rpcErr && rpcData) {
+          if (rpcData.expired) {
+            return res.status(410).json({
+              success: false,
+              expired: true,
+              status: rpcData.status || 'expired',
+              completedAt: rpcData.completed_at,
+              reason: rpcData.reason || 'This emergency sharing link has expired or concluded.'
+            });
+          }
+          return res.json({
+            success: true,
+            data: rpcData
+          });
+        }
+
+        // Direct table query fallback
+        const { data: trip, error: tripErr } = await supabaseAdmin
+          .from('trips')
+          .select('*, contacts:trusted_contact_id(name, phone, relationship)')
+          .eq('share_token', cleanToken)
+          .maybeSingle();
+
+        if (!tripErr && trip) {
+          // Check expiration, revocation, completion
+          if (trip.share_revoked) {
+            return res.status(410).json({
+              success: false,
+              expired: true,
+              status: 'revoked',
+              reason: 'This emergency trip sharing link has been revoked by the traveler.'
+            });
+          }
+
+          if (trip.status === 'completed' || trip.status === 'cancelled') {
+            return res.status(410).json({
+              success: false,
+              expired: true,
+              status: trip.status,
+              completedAt: trip.completed_at,
+              reason: 'This emergency journey has concluded safely. Live emergency telemetry is deactivated.'
+            });
+          }
+
+          if (trip.share_token_expires_at && new Date() > new Date(trip.share_token_expires_at)) {
+            return res.status(410).json({
+              success: false,
+              expired: true,
+              status: 'expired',
+              reason: 'This emergency sharing link has expired.'
+            });
+          }
+
+          const settings = trip.share_settings || { share_location: true, share_contact: true, share_eta: true, display_name: '' };
+
+          // Fetch profile name
+          let travellerName = settings.display_name;
+          if (!travellerName) {
+            const { data: profile } = await supabaseAdmin.from('profiles').select('full_name').eq('id', trip.user_id).maybeSingle();
+            travellerName = profile?.full_name || 'WaySafe Traveler';
+          }
+
+          // Fetch latest consented checkin if location enabled
+          let lastLoc = null;
+          if (settings.share_location !== false && trip.location_sharing_consent) {
+            const { data: latestChk } = await supabaseAdmin
+              .from('trip_checkins')
+              .select('latitude, longitude, accuracy, checked_at:checked_in_at')
+              .eq('trip_id', trip.id)
+              .not('latitude', 'is', null)
+              .order('checked_in_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            if (latestChk) {
+              lastLoc = {
+                latitude: latestChk.latitude,
+                longitude: latestChk.longitude,
+                accuracy: latestChk.accuracy,
+                recordedAt: latestChk.checked_at
+              };
+            }
+          }
+
+          const sanitized = {
+            id: trip.id,
+            tripName: trip.trip_name || trip.title || 'Emergency Travel Journey',
+            travellerName,
+            startLocation: trip.start_location,
+            destination: trip.destination,
+            departureTime: trip.departure_time,
+            estimatedArrival: settings.share_eta !== false ? trip.estimated_arrival : null,
+            status: trip.status,
+            startedAt: trip.started_at,
+            lastCheckInAt: trip.last_check_in_at,
+            transportMode: trip.transport_mode || 'transit',
+            emergencyNotes: trip.emergency_notes || '',
+            shareExpiresAt: trip.share_token_expires_at,
+            lastLocation: lastLoc,
+            emergencyContact: (settings.share_contact !== false && trip.contacts) ? {
+              name: trip.contacts.name,
+              phone: trip.contacts.phone,
+              relationship: trip.contacts.relationship
+            } : null
+          };
+
+          return res.json({
+            success: true,
+            data: sanitized
+          });
+        }
+      } catch (sbErr) {
+        console.warn('[tripsController] getPublicEmergencyTrip Supabase error:', sbErr.message);
+      }
+    }
+
+    // 2. Fallback store check
+    const match = await firestoreService.findTripByShareToken(cleanToken);
+    if (!match || !match.trip) {
+      return res.status(404).json({
+        success: false,
+        error: 'Emergency trip not found for this sharing token.'
+      });
+    }
+
+    const { trip, contact, latestCheckin } = match;
+
+    if (trip.share_revoked || trip.shareRevoked) {
+      return res.status(410).json({
+        success: false,
+        expired: true,
+        status: 'revoked',
+        reason: 'This emergency trip sharing link has been revoked by the traveler.'
+      });
+    }
+
+    if (trip.status === 'completed' || trip.status === 'cancelled') {
+      return res.status(410).json({
+        success: false,
+        expired: true,
+        status: trip.status,
+        completedAt: trip.completed_at || trip.completedAt,
+        reason: 'This emergency journey has concluded safely. Live emergency telemetry is deactivated.'
+      });
+    }
+
+    const expTime = trip.share_token_expires_at || trip.shareTokenExpiresAt;
+    if (expTime && new Date() > new Date(expTime)) {
+      return res.status(410).json({
+        success: false,
+        expired: true,
+        status: 'expired',
+        reason: 'This emergency sharing link has expired.'
+      });
+    }
+
+    const settings = trip.share_settings || trip.shareSettings || { share_location: true, share_contact: true, share_eta: true, display_name: '' };
+
+    let lastLoc = null;
+    if (settings.share_location !== false && (trip.location_sharing_consent || trip.locationSharingConsent) && latestCheckin) {
+      lastLoc = {
+        latitude: latestCheckin.latitude,
+        longitude: latestCheckin.longitude,
+        accuracy: latestCheckin.accuracy,
+        recordedAt: latestCheckin.checked_in_at || latestCheckin.createdAt
+      };
+    }
+
+    const sanitized = {
+      id: trip.id,
+      tripName: trip.trip_name || trip.title || 'Emergency Travel Journey',
+      travellerName: settings.display_name || 'WaySafe Traveler',
+      startLocation: trip.start_location || trip.startLocation,
+      destination: trip.destination,
+      departureTime: trip.departure_time || trip.departureTime,
+      estimatedArrival: settings.share_eta !== false ? (trip.estimated_arrival || trip.estimatedArrival) : null,
+      status: trip.status,
+      startedAt: trip.started_at || trip.startedAt,
+      lastCheckInAt: trip.last_check_in_at || trip.lastCheckInAt,
+      transportMode: trip.transport_mode || trip.transportMode || 'transit',
+      emergencyNotes: trip.emergency_notes || trip.emergencyNotes || '',
+      shareExpiresAt: expTime,
+      lastLocation: lastLoc,
+      emergencyContact: (settings.share_contact !== false && contact) ? {
+        name: contact.name,
+        phone: contact.phone,
+        relationship: contact.relationship
+      } : null
+    };
+
+    return res.json({
+      success: true,
+      data: sanitized
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * GET /api/trips/public/:token/qr
+ * Returns PNG QR code for the public trip token
+ */
+export async function getPublicEmergencyTripQr(req, res, next) {
+  try {
+    const { token } = req.params;
+    if (!token) return res.status(400).send('Missing token');
+    const host = req.get('host');
+    const protocol = req.protocol;
+    const publicUrl = `${protocol}://${host}/public-trip.html?token=${encodeURIComponent(token)}`;
+
+    const qrPng = await QRCode.toBuffer(publicUrl, {
+      type: 'png',
+      width: 400,
+      margin: 2,
+      color: { dark: '#0a192f', light: '#ffffff' }
+    });
+
+    res.setHeader('Content-Type', 'image/png');
+    res.setHeader('Cache-Control', 'public, max-age=300');
+    return res.send(qrPng);
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * GET /api/trips/:id/share-token
+ * Authenticated owner gets the share token, settings, and QR data URL
+ */
+export async function getTripShareToken(req, res, next) {
+  try {
+    const userId = req.user.uid;
+    const { id } = req.params;
+
+    let trip = null;
+    if (isSupabaseConfigured && req.user.token && !req.user.isMock) {
+      const client = getUserClient(req.user.token) || supabaseAdmin;
+      const { data } = await client.from('trips').select('*').eq('id', id).eq('user_id', userId).maybeSingle();
+      if (data) trip = data;
+    }
+    if (!trip) {
+      trip = await firestoreService.getTripById(userId, id);
+    }
+    if (!trip) {
+      return res.status(404).json({ success: false, error: 'Trip not found or does not belong to you.' });
+    }
+
+    let token = trip.share_token || trip.shareToken;
+    let expiresAt = trip.share_token_expires_at || trip.shareTokenExpiresAt;
+    let settings = trip.share_settings || trip.shareSettings || { share_location: true, share_contact: true, share_eta: true, display_name: '' };
+    let revoked = Boolean(trip.share_revoked ?? trip.shareRevoked ?? false);
+
+    if (!token) {
+      token = crypto.randomBytes(20).toString('hex');
+      expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+      const updates = {
+        share_token: token,
+        share_token_expires_at: expiresAt,
+        share_settings: settings,
+        share_revoked: false
+      };
+      if (isSupabaseConfigured && req.user.token && !req.user.isMock) {
+        const client = getUserClient(req.user.token) || supabaseAdmin;
+        await client.from('trips').update(updates).eq('id', id).eq('user_id', userId);
+      }
+      await firestoreService.updateTrip(userId, id, updates);
+    }
+
+    const host = req.get('host');
+    const protocol = req.protocol;
+    const shareUrl = `${protocol}://${host}/public-trip.html?token=${token}`;
+    const qrCodeDataUrl = await QRCode.toDataURL(shareUrl, { width: 360, margin: 2 });
+
+    return res.json({
+      success: true,
+      data: {
+        tripId: id,
+        shareToken: token,
+        shareUrl,
+        shareExpiresAt: expiresAt,
+        shareSettings: settings,
+        shareRevoked: revoked,
+        qrCodeDataUrl,
+        status: trip.status
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * POST /api/trips/:id/share-token
+ * Generate/refresh new token
+ */
+export async function generateTripShareToken(req, res, next) {
+  try {
+    const userId = req.user.uid;
+    const { id } = req.params;
+
+    let trip = null;
+    if (isSupabaseConfigured && req.user.token && !req.user.isMock) {
+      const client = getUserClient(req.user.token) || supabaseAdmin;
+      const { data } = await client.from('trips').select('*').eq('id', id).eq('user_id', userId).maybeSingle();
+      if (data) trip = data;
+    }
+    if (!trip) {
+      trip = await firestoreService.getTripById(userId, id);
+    }
+    if (!trip) {
+      return res.status(404).json({ success: false, error: 'Trip not found.' });
+    }
+
+    const token = crypto.randomBytes(20).toString('hex');
+    const expiresAt = new Date(Date.now() + (req.body?.expires_in_hours || 24) * 60 * 60 * 1000).toISOString();
+    const settings = req.body?.share_settings || trip.share_settings || trip.shareSettings || { share_location: true, share_contact: true, share_eta: true, display_name: '' };
+
+    const updates = {
+      share_token: token,
+      share_token_expires_at: expiresAt,
+      share_settings: settings,
+      share_revoked: false
+    };
+
+    if (isSupabaseConfigured && req.user.token && !req.user.isMock) {
+      const client = getUserClient(req.user.token) || supabaseAdmin;
+      await client.from('trips').update(updates).eq('id', id).eq('user_id', userId);
+    }
+    await firestoreService.updateTrip(userId, id, updates);
+
+    const host = req.get('host');
+    const protocol = req.protocol;
+    const shareUrl = `${protocol}://${host}/public-trip.html?token=${token}`;
+    const qrCodeDataUrl = await QRCode.toDataURL(shareUrl, { width: 360, margin: 2 });
+
+    return res.status(201).json({
+      success: true,
+      data: {
+        tripId: id,
+        shareToken: token,
+        shareUrl,
+        shareExpiresAt: expiresAt,
+        shareSettings: settings,
+        shareRevoked: false,
+        qrCodeDataUrl
+      },
+      message: 'Emergency sharing token and QR code generated.'
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * POST /api/trips/:id/share-token/revoke
+ * Immediately revoke emergency sharing link
+ */
+export async function revokeTripShareToken(req, res, next) {
+  try {
+    const userId = req.user.uid;
+    const { id } = req.params;
+
+    const updates = { share_revoked: true, updated_at: new Date().toISOString() };
+    if (isSupabaseConfigured && req.user.token && !req.user.isMock) {
+      const client = getUserClient(req.user.token) || supabaseAdmin;
+      const { data, error } = await client.from('trips').update(updates).eq('id', id).eq('user_id', userId).select().single();
+      if (error || !data) {
+        return res.status(404).json({ success: false, error: 'Trip not found or does not belong to you.' });
+      }
+    } else {
+      const trip = await firestoreService.getTripById(userId, id);
+      if (!trip) {
+        return res.status(404).json({ success: false, error: 'Trip not found.' });
+      }
+      await firestoreService.updateTrip(userId, id, updates);
+    }
+
+    return res.json({
+      success: true,
+      message: 'Emergency trip sharing link revoked successfully. Public access is disabled.'
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * PATCH /api/trips/:id/share-token/settings
+ * Update consent settings for public emergency sharing
+ */
+export async function updateTripShareSettings(req, res, next) {
+  try {
+    const userId = req.user.uid;
+    const { id } = req.params;
+    const { share_location, share_contact, share_eta, display_name } = req.body || {};
+
+    let existing = null;
+    if (isSupabaseConfigured && req.user.token && !req.user.isMock) {
+      const client = getUserClient(req.user.token) || supabaseAdmin;
+      const { data } = await client.from('trips').select('*').eq('id', id).eq('user_id', userId).maybeSingle();
+      if (data) existing = data;
+    }
+    if (!existing) {
+      existing = await firestoreService.getTripById(userId, id);
+    }
+    if (!existing) {
+      return res.status(404).json({ success: false, error: 'Trip not found.' });
+    }
+
+    const currentSettings = existing.share_settings || existing.shareSettings || {};
+    const newSettings = {
+      ...currentSettings,
+      ...(share_location !== undefined ? { share_location: Boolean(share_location) } : {}),
+      ...(share_contact !== undefined ? { share_contact: Boolean(share_contact) } : {}),
+      ...(share_eta !== undefined ? { share_eta: Boolean(share_eta) } : {}),
+      ...(display_name !== undefined ? { display_name: String(display_name).trim() } : {})
+    };
+
+    const updates = { share_settings: newSettings, updated_at: new Date().toISOString() };
+    if (isSupabaseConfigured && req.user.token && !req.user.isMock) {
+      const client = getUserClient(req.user.token) || supabaseAdmin;
+      await client.from('trips').update(updates).eq('id', id).eq('user_id', userId);
+    }
+    await firestoreService.updateTrip(userId, id, updates);
+
+    return res.json({
+      success: true,
+      data: {
+        shareSettings: newSettings
+      },
+      message: 'Emergency trip sharing consent settings updated.'
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * GET /api/trips/:id/qr
+ * Returns PNG QR image for the trip owner to enlarge or download
+ */
+export async function getTripQrCode(req, res, next) {
+  try {
+    const userId = req.user.uid;
+    const { id } = req.params;
+
+    let trip = null;
+    if (isSupabaseConfigured && req.user.token && !req.user.isMock) {
+      const client = getUserClient(req.user.token) || supabaseAdmin;
+      const { data } = await client.from('trips').select('*').eq('id', id).eq('user_id', userId).maybeSingle();
+      if (data) trip = data;
+    }
+    if (!trip) {
+      trip = await firestoreService.getTripById(userId, id);
+    }
+    if (!trip) {
+      return res.status(404).json({ success: false, error: 'Trip not found.' });
+    }
+
+    let token = trip.share_token || trip.shareToken;
+    if (!token) {
+      token = crypto.randomBytes(20).toString('hex');
+      const updates = {
+        share_token: token,
+        share_token_expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        share_revoked: false
+      };
+      if (isSupabaseConfigured && req.user.token && !req.user.isMock) {
+        const client = getUserClient(req.user.token) || supabaseAdmin;
+        await client.from('trips').update(updates).eq('id', id).eq('user_id', userId);
+      }
+      await firestoreService.updateTrip(userId, id, updates);
+    }
+
+    const host = req.get('host');
+    const protocol = req.protocol;
+    const shareUrl = `${protocol}://${host}/public-trip.html?token=${token}`;
+
+    const qrPng = await QRCode.toBuffer(shareUrl, {
+      type: 'png',
+      width: 450,
+      margin: 2,
+      color: { dark: '#0a192f', light: '#ffffff' }
+    });
+
+    if (req.query.download === 'true') {
+      res.setHeader('Content-Disposition', `attachment; filename="waysafe-emergency-qr-${id.substring(0, 8)}.png"`);
+    }
+    res.setHeader('Content-Type', 'image/png');
+    return res.send(qrPng);
+  } catch (error) {
+    next(error);
+  }
+}
+

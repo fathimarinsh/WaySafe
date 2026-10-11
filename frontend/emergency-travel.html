@@ -158,6 +158,9 @@
             <button type="button" class="btn btn-primary" id="btn-submit-emergency-checkin">
               <span>✅</span> Record Check-in Now
             </button>
+            <button type="button" class="btn btn-secondary" id="btn-show-emergency-qr" style="border-color: #0284c7; color: #0284c7; font-weight: 700;">
+              <span>📱</span> Emergency QR Code
+            </button>
             <a id="btn-view-trip-details" href="trip-status.html" class="btn btn-secondary">
               <span>🗺️</span> View Live Trip Map
             </a>
@@ -304,6 +307,99 @@
         </div>
       </div>
     </div>
+
+    <!-- Emergency QR Code Modal -->
+    <div class="modal-backdrop" id="emergency-qr-modal">
+      <div class="modal-dialog" style="max-width: 540px;">
+        <div class="card-header" style="background: linear-gradient(135deg, var(--navy-900), #1e293b); color: #fff;">
+          <h3 class="card-title" style="color: #38bdf8;">
+            <span>📱</span> Emergency Trip QR Code
+          </h3>
+          <button type="button" id="btn-close-qr-modal" class="btn btn-sm btn-outline" style="color: #fff; border-color: #475569;">✕</button>
+        </div>
+        <div class="card-body" style="padding: 1.5rem;">
+          <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 1.25rem;">
+            Anyone who scans this QR code will see a dedicated public emergency information page. Your private credentials, account history, and passwords are never exposed.
+          </p>
+
+          <!-- QR Display Box -->
+          <div id="qr-preview-container" style="text-align: center; padding: 1.25rem; background: #fff; border-radius: var(--radius-lg); border: 2px solid var(--border-subtle); margin-bottom: 1.25rem; box-shadow: var(--shadow-sm);">
+            <div id="qr-spinner" class="spinner" style="margin: 2rem auto;"></div>
+            <div id="qr-revoked-msg" style="display: none; padding: 2rem 1rem; color: var(--danger-600); font-weight: 700;">
+              ⚠️ Emergency sharing link has been revoked. Public access is disabled.
+            </div>
+            <img id="qr-image" src="" alt="Emergency Trip QR Code" style="display: none; max-width: 220px; width: 100%; height: auto; margin: 0 auto; border-radius: 8px;" />
+            <div id="qr-enlarged-view" style="display: none; margin-top: 1rem;">
+              <img id="qr-enlarged-img" src="" alt="Enlarged QR Code" style="max-width: 360px; width: 100%; height: auto; border: 2px solid #0f172a; border-radius: 10px;" />
+            </div>
+          </div>
+
+          <!-- Display, Enlarge & Download Actions -->
+          <div id="qr-action-buttons-group" style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; margin-bottom: 1.5rem;">
+            <button type="button" id="btn-enlarge-qr" class="btn btn-sm btn-navy">
+              🔍 Enlarge QR
+            </button>
+            <a id="btn-download-qr" href="#" class="btn btn-sm btn-teal" download="waysafe-emergency-qr.png">
+              📥 Download PNG
+            </a>
+            <button type="button" id="btn-copy-public-link" class="btn btn-sm btn-secondary">
+              📋 Copy Link
+            </button>
+          </div>
+
+          <!-- Consent Settings Section -->
+          <div style="background: var(--surface-alt); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1.25rem;">
+            <div style="font-weight: 700; font-size: 0.85rem; color: var(--navy-900); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.35rem;">
+              <span>🔒</span> Emergency Sharing Consent Controls
+            </div>
+            <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+              Explicitly choose which data is visible to responders scanning this QR code:
+            </p>
+            
+            <div style="display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.85rem;">
+              <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                <input type="checkbox" id="consent-share-location" checked />
+                <span>Share Last Known Location &amp; Timestamp</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                <input type="checkbox" id="consent-share-contact" checked />
+                <span>Share Emergency Contact Name &amp; Phone</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                <input type="checkbox" id="consent-share-eta" checked />
+                <span>Share Estimated Arrival Time (ETA)</span>
+              </label>
+              
+              <div style="margin-top: 0.5rem;">
+                <label for="consent-display-name" style="font-size: 0.78rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 0.25rem;">
+                  Responder Display Name (Optional)
+                </label>
+                <input type="text" id="consent-display-name" class="form-input form-input-sm" placeholder="e.g. Alex M." style="font-size: 0.82rem; padding: 0.35rem 0.65rem;" />
+              </div>
+            </div>
+
+            <div style="margin-top: 0.75rem; display: flex; justify-content: flex-end;">
+              <button type="button" id="btn-save-consent" class="btn btn-sm btn-outline">
+                Save Consent Settings
+              </button>
+            </div>
+          </div>
+
+          <!-- Danger Zone: Revoke Link -->
+          <div style="border-top: 1px solid var(--border-subtle); padding-top: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+            <span style="font-size: 0.75rem; color: var(--danger-600);">
+              Need to disable this QR code immediately?
+            </span>
+            <button type="button" id="btn-revoke-qr" class="btn btn-sm btn-outline-danger">
+              🛑 Revoke QR Link
+            </button>
+          </div>
+        </div>
+        <div class="card-footer" style="display: flex; justify-content: flex-end;">
+          <button type="button" id="btn-dismiss-qr-modal" class="btn btn-secondary">Close</button>
+        </div>
+      </div>
+    </div>
   </main>
 
   <!-- Shared Footer -->
@@ -355,6 +451,148 @@
 
       // 4. Bind forms & handlers
       setupEventHandlers();
+      setupEmergencyQrModal();
+    }
+
+    let currentShareTokenData = null;
+
+    function setupEmergencyQrModal() {
+      const modal = document.getElementById('emergency-qr-modal');
+      const openBtn = document.getElementById('btn-show-emergency-qr');
+      const closeBtn = document.getElementById('btn-close-qr-modal');
+      const dismissBtn = document.getElementById('btn-dismiss-qr-modal');
+      const enlargeBtn = document.getElementById('btn-enlarge-qr');
+      const downloadLink = document.getElementById('btn-download-qr');
+      const copyBtn = document.getElementById('btn-copy-public-link');
+      const saveConsentBtn = document.getElementById('btn-save-consent');
+      const revokeBtn = document.getElementById('btn-revoke-qr');
+
+      const qrSpinner = document.getElementById('qr-spinner');
+      const qrImg = document.getElementById('qr-image');
+      const qrRevokedMsg = document.getElementById('qr-revoked-msg');
+      const qrEnlargedView = document.getElementById('qr-enlarged-view');
+      const qrEnlargedImg = document.getElementById('qr-enlarged-img');
+      const actionGroup = document.getElementById('qr-action-buttons-group');
+
+      const consentLoc = document.getElementById('consent-share-location');
+      const consentContact = document.getElementById('consent-share-contact');
+      const consentEta = document.getElementById('consent-share-eta');
+      const consentName = document.getElementById('consent-display-name');
+
+      async function loadShareDetails() {
+        if (!currentActiveTrip) return;
+        qrSpinner.style.display = 'block';
+        qrImg.style.display = 'none';
+        qrRevokedMsg.style.display = 'none';
+        qrEnlargedView.style.display = 'none';
+
+        try {
+          const data = await tripsService.getShareToken(currentActiveTrip.id);
+          currentShareTokenData = data;
+
+          qrSpinner.style.display = 'none';
+
+          if (data.shareRevoked) {
+            qrRevokedMsg.style.display = 'block';
+            actionGroup.style.display = 'none';
+            revokeBtn.disabled = true;
+            revokeBtn.textContent = 'Already Revoked';
+          } else {
+            qrImg.src = data.qrCodeDataUrl;
+            qrImg.style.display = 'block';
+            qrEnlargedImg.src = data.qrCodeDataUrl;
+            actionGroup.style.display = 'flex';
+            revokeBtn.disabled = false;
+            revokeBtn.textContent = '🛑 Revoke QR Link';
+
+            const protocol = window.location.protocol;
+            const apiBase = window.location.port === '5000' ? '' : `${protocol}//${window.location.hostname}:5000`;
+            downloadLink.href = `${apiBase}/api/trips/${currentActiveTrip.id}/qr?download=true`;
+
+            const settings = data.shareSettings || {};
+            consentLoc.checked = settings.share_location !== false;
+            consentContact.checked = settings.share_contact !== false;
+            consentEta.checked = settings.share_eta !== false;
+            consentName.value = settings.display_name || '';
+          }
+        } catch (err) {
+          qrSpinner.style.display = 'none';
+          showToast(err.message || 'Failed to load emergency QR code', 'danger');
+        }
+      }
+
+      openBtn?.addEventListener('click', async () => {
+        if (!currentActiveTrip) {
+          showToast('No active journey in progress.', 'warning');
+          return;
+        }
+        modal.classList.add('active');
+        await loadShareDetails();
+      });
+
+      const closeModal = () => modal.classList.remove('active');
+      closeBtn?.addEventListener('click', closeModal);
+      dismissBtn?.addEventListener('click', closeModal);
+
+      enlargeBtn?.addEventListener('click', () => {
+        if (qrEnlargedView.style.display === 'none') {
+          qrEnlargedView.style.display = 'block';
+          qrImg.style.display = 'none';
+          enlargeBtn.textContent = 'Standard Size';
+        } else {
+          qrEnlargedView.style.display = 'none';
+          qrImg.style.display = 'block';
+          enlargeBtn.textContent = '🔍 Enlarge QR';
+        }
+      });
+
+      copyBtn?.addEventListener('click', async () => {
+        if (!currentShareTokenData || !currentShareTokenData.shareUrl) return;
+        try {
+          await navigator.clipboard.writeText(currentShareTokenData.shareUrl);
+          showToast('Public emergency trip link copied to clipboard!', 'success');
+        } catch (e) {
+          prompt('Copy public emergency trip link:', currentShareTokenData.shareUrl);
+        }
+      });
+
+      saveConsentBtn?.addEventListener('click', async () => {
+        if (!currentActiveTrip) return;
+        saveConsentBtn.disabled = true;
+        saveConsentBtn.textContent = 'Saving...';
+        try {
+          await tripsService.updateShareSettings(currentActiveTrip.id, {
+            share_location: consentLoc.checked,
+            share_contact: consentContact.checked,
+            share_eta: consentEta.checked,
+            display_name: consentName.value.trim()
+          });
+          showToast('Emergency sharing consent settings updated!', 'success');
+        } catch (err) {
+          showToast(err.message || 'Failed to update consent settings', 'danger');
+        } finally {
+          saveConsentBtn.disabled = false;
+          saveConsentBtn.textContent = 'Save Consent Settings';
+        }
+      });
+
+      revokeBtn?.addEventListener('click', async () => {
+        if (!currentActiveTrip) return;
+        const confirmRevoke = confirm('Are you sure you want to revoke this emergency sharing QR code? Anyone who scanned it will no longer be able to see this trip.');
+        if (!confirmRevoke) return;
+
+        revokeBtn.disabled = true;
+        revokeBtn.textContent = 'Revoking...';
+        try {
+          await tripsService.revokeShareToken(currentActiveTrip.id);
+          showToast('Emergency QR sharing link revoked successfully.', 'info');
+          await loadShareDetails();
+        } catch (err) {
+          showToast(err.message || 'Failed to revoke link', 'danger');
+          revokeBtn.disabled = false;
+          revokeBtn.textContent = '🛑 Revoke QR Link';
+        }
+      });
     }
 
     async function initBatteryTelemetry() {
