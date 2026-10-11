@@ -17,10 +17,14 @@ import { errorHandler, notFoundHandler } from './middleware/error-handler.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Fallback load backend/.env if running from repository root
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
+// ==========================================
 // ==========================================
 // CORS Configuration
 // ==========================================
@@ -33,7 +37,13 @@ const corsOptions = {
     // Allow requests with no origin (e.g. mobile apps, curl, same-origin)
     if (!origin) return callback(null, true);
 
-    if (allowedOrigins.includes('*') || allowedOrigins.includes(origin) || NODE_ENV === 'development') {
+    if (
+      allowedOrigins.includes('*') ||
+      allowedOrigins.includes(origin) ||
+      origin.endsWith('.vercel.app') ||
+      Boolean(process.env.VERCEL) ||
+      NODE_ENV === 'development'
+    ) {
       return callback(null, true);
     }
     const msg = `CORS policy violation: The origin '${origin}' is not allowed.`;
@@ -69,8 +79,24 @@ const frontendPath = path.resolve(__dirname, '../../frontend');
 app.use(express.static(frontendPath));
 
 // ==========================================
-// Health-check Endpoint: GET /api/health
+// API Index & Health Check Endpoints
 // ==========================================
+app.get('/api', (req, res) => {
+  res.status(200).json({
+    status: 'healthy',
+    service: 'WaySafe REST API',
+    environment: NODE_ENV,
+    deployedOn: process.env.VERCEL ? 'Vercel Serverless' : 'Node.js Express',
+    endpoints: [
+      '/api/health',
+      '/api/trips',
+      '/api/contacts',
+      '/api/checkins',
+      '/api/profile'
+    ]
+  });
+});
+
 app.get('/api/health', (req, res) => {
   res.status(200).json({
     status: 'healthy',
@@ -78,6 +104,7 @@ app.get('/api/health', (req, res) => {
     uptime: Math.floor(process.uptime()),
     timestamp: new Date().toISOString(),
     environment: NODE_ENV,
+    serverless: Boolean(process.env.VERCEL),
     database: {
       provider: 'supabase',
       connected: isSupabaseConfigured,
@@ -104,25 +131,32 @@ app.use('/api/*', notFoundHandler);
 app.use(errorHandler);
 
 // ==========================================
-// Start Server
+// Start Server (Only in Standalone Mode)
 // ==========================================
-const server = app.listen(PORT, () => {
-  console.log('====================================================');
-  console.log(`🛡️  WaySafe API Server running on port ${PORT}`);
-  console.log(`📡  Environment: ${NODE_ENV}`);
-  console.log(`🩺  Health Check: http://localhost:${PORT}/api/health`);
-  console.log(`🌐  Frontend:     http://localhost:${PORT}/index.html`);
-  console.log(`⚡  Database:     Supabase (${isSupabaseConfigured ? 'CONNECTED' : 'STANDBY / DEMO'})`);
-  console.log('====================================================');
-});
+let server = null;
+if (!process.env.VERCEL) {
+  server = app.listen(PORT, () => {
+    console.log('====================================================');
+    console.log(`🛡️  WaySafe API Server running on port ${PORT}`);
+    console.log(`📡  Environment: ${NODE_ENV}`);
+    console.log(`🩺  Health Check: http://localhost:${PORT}/api/health`);
+    console.log(`🌐  Frontend:     http://localhost:${PORT}/index.html`);
+    console.log(`⚡  Database:     Supabase (${isSupabaseConfigured ? 'CONNECTED' : 'STANDBY / DEMO'})`);
+    console.log('====================================================');
+  });
+}
 
 // Graceful termination
 function gracefulShutdown(signal) {
   console.log(`Received ${signal}. Shutting down WaySafe server gracefully...`);
-  server.close(() => {
-    console.log('WaySafe server closed.');
+  if (server) {
+    server.close(() => {
+      console.log('WaySafe server closed.');
+      process.exit(0);
+    });
+  } else {
     process.exit(0);
-  });
+  }
 }
 
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));

@@ -1,0 +1,21 @@
+{
+  "name": "waysafe",
+  "version": "1.0.0",
+  "description": "WaySafe - Travel Safety Web Application",
+  "type": "module",
+  "main": "api/index.js",
+  "scripts": {
+    "start": "node backend/src/server.js",
+    "dev": "node --watch backend/src/server.js",
+    "test": "cd backend && npm test",
+    "test:all": "cd backend && npm run test:all"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.117.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "firebase-admin": "^13.1.0",
+    "qrcode": "^1.5.4"
+  }
+}

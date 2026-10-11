@@ -1163,7 +1163,8 @@
 
             // Set download URL
             const protocol = window.location.protocol;
-            const apiBase = window.location.port === '5000' ? '' : `${protocol}//${window.location.hostname}:5000`;
+            const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            const apiBase = (!isLocal || window.location.port === '5000' || !window.location.port) ? '' : `${protocol}//${window.location.hostname}:5000`;
             downloadLink.href = `${apiBase}/api/trips/${currentTrip.id}/qr?download=true`;
 
             // Populate consent settings

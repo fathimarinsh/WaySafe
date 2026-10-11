@@ -1,0 +1,8 @@
+.git
+.agents
+.env
+.env.local
+backend/.env
+backend/.env.local
+backend/test-*
+*.log

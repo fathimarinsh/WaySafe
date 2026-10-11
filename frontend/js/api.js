@@ -1,8 +1,10 @@
 import { getIdToken } from './auth.js';
 
-// If running directly on backend port 5000, relative /api is used.
-// If running on a different port (like 3000 or 5500), connect to port 5000.
-const API_BASE_URL = window.location.port === '5000'
+// On Vercel or production hosting, use relative /api.
+// When running locally on port 5000, use relative /api.
+// When running locally on dev server (port 5500, 3000, etc.), point to http://localhost:5000/api.
+const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const API_BASE_URL = (!isLocalhost || window.location.port === '5000' || !window.location.port)
   ? '/api'
   : `${window.location.protocol}//${window.location.hostname}:5000/api`;
 
