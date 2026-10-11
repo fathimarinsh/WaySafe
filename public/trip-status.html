@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Active Trip & Check-In Monitor — WaySafe</title>
+  <meta name="description" content="Live trip monitor with consensual GPS location updates, I'm Safe check-ins, and trusted emergency contacts.">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <style>
+    .status-summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .summary-card {
+      background-color: var(--surface-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .summary-card:hover {
+      border-color: var(--teal-500);
+      box-shadow: var(--shadow-sm);
+    }
+    .summary-label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      font-weight: 700;
+      color: var(--text-muted);
+      letter-spacing: 0.04em;
+      margin-bottom: 0.35rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .summary-value {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--navy-900);
+      word-break: break-word;
+    }
+    .summary-subtext {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-top: 0.35rem;
+    }
+    .action-bar-card {
+      background: linear-gradient(135deg, var(--navy-900), var(--navy-800));
+      color: #fff;
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      box-shadow: var(--shadow-md);
+    }
+    .action-bar-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1.25rem;
+    }
+    .action-btn-group {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+    .btn-safe {
+      background-color: var(--teal-600);
+      color: #fff;
+      font-size: 1rem;
+      padding: 0.75rem 1.5rem;
+      font-weight: 700;
+      border: 1px solid var(--teal-500);
+      box-shadow: 0 4px 12px rgba(13, 148, 136, 0.35);
+    }
+    .btn-safe:hover {
+      background-color: var(--teal-500);
+      transform: translateY(-2px);
+    }
+    .user-loc-pulse {
+      position: relative;
+      width: 16px;
+      height: 16px;
+      background: #0D9488;
+      border: 2px solid #fff;
+      border-radius: 50%;
+      box-shadow: 0 0 8px rgba(13, 148, 136, 0.8);
+    }
+    .map-tile-warning {
+      display: none;
+      background-color: var(--warning-100);
+      color: var(--warning-600);
+      padding: 0.5rem 0.75rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.8rem;
+      margin-top: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Shared Header -->
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="index.html" class="brand-link">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+        </div>
+        <div class="brand-name">Way<span>Safe</span></div>
+      </a>
+
+      <button class="mobile-nav-toggle" id="mobile-nav-toggle" aria-label="Toggle navigation">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+      </button>
+
+      <nav class="main-nav" id="main-nav">
+        <ul class="nav-links">
+          <li><a href="dashboard.html" class="nav-link">Dashboard</a></li>
+          <li><a href="trip-setup.html" class="nav-link">Plan Journey</a></li>
+          <li><a href="emergency-travel.html" class="nav-link">Emergency Travel</a></li>
+          <li><a href="accessibility-planner.html" class="nav-link">Accessibility</a></li>
+          <li><a href="low-battery.html" class="nav-link">Low-Battery Guide</a></li>
+          <li><a href="emergency-contacts.html" class="nav-link">Contacts</a></li>
+          <li><a href="trip-history.html" class="nav-link">History</a></li>
+        </ul>
+
+        <div class="nav-auth" id="nav-auth-container"></div>
+      </nav>
+    </div>
+  </header>
+
+  <main class="main-content">
+    <!-- Top Journey Title Header -->
+    <div class="page-header">
+      <div class="page-header-text">
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+          <span class="badge badge-teal" id="status-pill">ACTIVE JOURNEY</span>
+          <span style="font-size: 0.85rem; color: var(--text-muted);" id="trip-started-time">--</span>
+        </div>
+        <h1 id="trip-title-header">Loading Journey Details...</h1>
+        <p id="trip-destination-header">Destination: Acquiring itinerary...</p>
+      </div>
+
+      <div class="page-header-actions">
+        <a href="dashboard.html" class="btn btn-secondary">
+          ← Dashboard
+        </a>
+        <button type="button" id="btn-sos-modal" class="btn btn-outline-danger">
+          🚨 Emergency SOS
+        </button>
+      </div>
+    </div>
+
+    <!-- Battery Warning Banner (Conditional) -->
+    <div id="low-battery-banner" class="alert alert-warning" style="display: none; margin-bottom: 1.5rem;">
+      <div class="alert-icon">⚠️</div>
+      <div style="flex: 1;">
+        <div class="alert-title">Low Battery Warning Detected (&le;20%)</div>
+        <span>Your device battery has dropped to a critical level. Conserve power and send a consensual location update before shutdown.</span>
+      </div>
+      <a href="low-battery.html" class="btn btn-sm btn-navy">Open Low-Battery Protocol →</a>
+    </div>
+
+    <!-- Primary Frontend Action Bar (Requested Actions) -->
+    <div class="action-bar-card">
+      <div class="action-bar-inner">
+        <div>
+          <h2 style="color: #fff; font-size: 1.25rem; margin-bottom: 0.25rem;">Active Safety Controls</h2>
+          <p style="color: rgba(255, 255, 255, 0.8); font-size: 0.85rem; margin-bottom: 0;">
+            Keep your loved ones reassured and record verified check-ins along your route.
+          </p>
+        </div>
+
+        <div class="action-btn-group">
+          <!-- 1. "I'm Safe" Action -->
+          <button type="button" id="btn-im-safe" class="btn btn-safe">
+            <span>✅</span> I'm Safe
+          </button>
+
+          <!-- Emergency Trip QR Code Action -->
+          <button type="button" id="btn-emergency-qr" class="btn btn-secondary" style="border-color: #0284c7; color: #0284c7; font-weight: 700;">
+            <span>📱</span> Emergency QR Code
+          </button>
+
+          <!-- 2. "Update Location" Action -->
+          <button type="button" id="btn-update-location" class="btn btn-secondary">
+            <span>📍</span> Update Location
+          </button>
+
+          <!-- 3. "Emergency Contacts" Action -->
+          <a href="emergency-contacts.html" id="btn-emergency-contacts" class="btn btn-secondary">
+            <span>👥</span> Emergency Contacts
+          </a>
+
+          <!-- 4. "End Trip" Action -->
+          <button type="button" id="btn-end-trip" class="btn btn-outline-danger" style="color: #FCA5A5; border-color: #EF4444;">
+            <span>🏁</span> End Trip
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 8 Required Active Trip Data Cards -->
+    <div class="status-summary-grid">
+      <!-- 1. Destination -->
+      <div class="summary-card">
+        <div>
+          <div class="summary-label"><span>🏁</span> Destination</div>
+          <div class="summary-value" id="disp-destination">--</div>
+        </div>
+        <div class="summary-subtext" id="disp-dest-details">Route target</div>
+      </div>
+
+      <!-- 2. Departure Time -->
+      <div class="summary-card">
+        <div>
+          <div class="summary-label"><span>🛫</span> Departure Time</div>
+          <div class="summary-value" id="disp-departure-time">--</div>
+        </div>
+        <div class="summary-subtext" id="disp-depart-details">Scheduled departure</div>
+      </div>
+
+      <!-- 3. Estimated Arrival -->
+      <div class="summary-card">
+        <div>
+          <div class="summary-label"><span>⏱️</span> Estimated Arrival</div>
+          <div class="summary-value" id="disp-estimated-arrival">--</div>
+        </div>
+        <div class="summary-subtext" id="disp-eta-remaining">ETA calculation</div>
+      </div>
+
+      <!-- 4. Trip Status -->
+      <div class="summary-card">
+        <div>
+          <div class="summary-label"><span>🛡️</span> Trip Status</div>
+          <div class="summary-value" id="disp-trip-status">
+            <span class="badge badge-teal">ACTIVE</span>
+          </div>
+        </div>
+        <div class="summary-subtext" id="disp-status-details">Journey actively monitored</div>
+      </div>
+
+      <!-- 5. Trusted Contact -->
+      <div class="summary-card">
+        <div>
+          <div class="summary-label"><span>👥</span> Trusted Contact</div>
+          <div class="summary-value" id="disp-trusted-contact">None Selected</div>
+        </div>
+        <div class="summary-subtext" id="disp-contact-details">No phone linked</div>
+      </div>
+
+      <!-- 6. Last Successful Check-In -->
+      <div class="summary-card">
+        <div>
+          <div class="summary-label"><span>✅</span> Last Successful Check-In</div>
+          <div class="summary-value" id="disp-last-checkin">No check-in yet</div>
+        </div>
+        <div class="summary-subtext" id="disp-last-checkin-msg">Tap "I'm Safe" above</div>
+      </div>
+
+      <!-- 7. Last Location Update -->
+      <div class="summary-card">
+        <div>
+          <div class="summary-label"><span>📍</span> Last Location Update</div>
+          <div class="summary-value" id="disp-last-location">Location unavailable</div>
+        </div>
+        <div class="summary-subtext" id="disp-last-location-time">Tap "Update Location"</div>
+      </div>
+
+      <!-- 8. Location Permission Status -->
+      <div class="summary-card">
+        <div>
+          <div class="summary-label"><span>🛰️</span> Permission Status</div>
+          <div class="summary-value" id="disp-permission-status">
+            <span class="badge badge-neutral">CHECKING...</span>
+          </div>
+        </div>
+        <div class="summary-subtext" id="disp-permission-detail">Browser GPS consent</div>
+      </div>
+    </div>
+
+    <!-- Map & Right Column Grid -->
+    <div class="card-grid-2" style="margin-bottom: 2rem;">
+      <!-- Leaflet.js Interactive Map with OpenStreetMap -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title"><span>🗺️</span> Journey Map & Live Position</h3>
+          <span class="badge badge-teal" id="map-status-pill">LEAFLET • OSM</span>
+        </div>
+        <div class="card-body" style="padding: 1rem;">
+          <div class="map-wrapper" style="height: 380px; position: relative;">
+            <div id="status-map" class="map-container" style="height: 100%; width: 100%; border-radius: var(--radius-md);"></div>
+            <div class="map-overlay-badge" style="position: absolute; top: 12px; right: 12px; z-index: 1000; background: rgba(255,255,255,0.95); padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; color: var(--navy-900); box-shadow: 0 2px 6px rgba(0,0,0,0.15);">
+              <span>🛰️</span> Consensual GPS Position
+            </div>
+          </div>
+
+          <!-- OpenStreetMap Tile Loading Failure Alert -->
+          <div id="map-tile-warning" class="map-tile-warning">
+            ⚠️ <strong>Tile Loading Notice:</strong> Some OpenStreetMap map tiles could not be fetched due to network restrictions. Coordinate pins remain accurate.
+          </div>
+
+          <div style="margin-top: 0.75rem; font-size: 0.825rem; color: var(--text-muted); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+            <span id="map-last-updated">Last map sync: Awaiting update</span>
+            <span>Map data &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Phone Battery & Check-in Timeline -->
+      <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+        <!-- Live Hardware Battery Status Card -->
+        <div class="card battery-card">
+          <div class="card-header" style="background: transparent; border-bottom: none; padding-bottom: 0;">
+            <h4 class="card-title"><span>🔋</span> Phone Battery Status</h4>
+            <span class="badge badge-neutral" id="charging-state-badge">STANDBY</span>
+          </div>
+          <div class="card-body">
+            <div class="battery-display">
+              <div>
+                <span class="battery-percentage" id="battery-status-pct">--%</span>
+                <div class="battery-status-text" id="battery-status-detail">
+                  Reading standard browser sensors...
+                </div>
+              </div>
+              <div class="battery-shell" aria-hidden="true">
+                <div class="battery-fill" id="battery-status-fill" style="width: 50%;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Check-In Timeline History -->
+        <div class="card" style="flex: 1;">
+          <div class="card-header">
+            <h4 class="card-title"><span>⏱️</span> Check-In History</h4>
+            <button type="button" id="btn-refresh-checkins" class="btn btn-sm btn-outline">🔄 Refresh</button>
+          </div>
+          <div class="card-body" style="max-height: 280px; overflow-y: auto;">
+            <div class="timeline" id="checkin-timeline">
+              <p style="color: var(--text-muted); font-size: 0.9rem;">No check-ins recorded yet. Tap "I'm Safe" above to log your status.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Safety Sandbox Transparency Notice -->
+    <div class="card" style="margin-bottom: 2rem;">
+      <div class="card-header">
+        <h4 class="card-title"><span>🛡️</span> Security & Data Transparency</h4>
+      </div>
+      <div class="card-body">
+        <p style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 0.5rem; line-height: 1.5;">
+          <strong>Consent-Driven Location:</strong> WaySafe never runs invisible background GPS tracking when the tab or browser is closed. Coordinates are acquired and persisted strictly with your active confirmation.
+        </p>
+        <p style="color: var(--text-muted); font-size: 0.8rem; margin-bottom: 0;">
+          All API requests are authenticated with cryptographic Supabase session tokens. Ownership of trips and check-ins is strictly enforced through server authorization and PostgreSQL Row-Level Security (RLS).
+        </p>
+      </div>
+    </div>
+  </main>
+
+  <!-- "I'm Safe" Confirmation Modal -->
+  <div class="modal-backdrop" id="im-safe-modal">
+    <div class="modal-dialog">
+      <div class="card-header" style="background-color: var(--teal-50); border-bottom: 1px solid var(--teal-100);">
+        <h3 class="card-title" style="color: var(--teal-700);">
+          <span>✅</span> Check-In Confirmed!
+        </h3>
+        <button type="button" id="btn-close-safe-modal" class="btn btn-sm btn-outline">✕</button>
+      </div>
+      <div class="card-body">
+        <p style="font-size: 1rem; color: var(--navy-900); font-weight: 600; margin-bottom: 0.5rem;">
+          Your "I'm Safe" check-in has been persisted to the server.
+        </p>
+        <div style="background-color: var(--surface-alt); padding: 0.85rem 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 1rem; font-size: 0.85rem;">
+          <div><strong>Timestamp:</strong> <span id="modal-safe-time">--</span></div>
+          <div><strong>Trip:</strong> <span id="modal-safe-trip">--</span></div>
+          <div><strong>Battery Level:</strong> <span id="modal-safe-battery">--</span></div>
+          <div><strong>GPS Location:</strong> <span id="modal-safe-location">Not included</span></div>
+        </div>
+        <p style="font-size: 0.825rem; color: var(--text-muted); margin-bottom: 0;">
+          Your trusted emergency contact can view your verified safety status timeline.
+        </p>
+      </div>
+      <div class="card-footer" style="display: flex; justify-content: flex-end;">
+        <button type="button" id="btn-ok-safe-modal" class="btn btn-primary">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- "Update Location" Confirmation Modal -->
+  <div class="modal-backdrop" id="update-location-modal">
+    <div class="modal-dialog">
+      <div class="card-header">
+        <h3 class="card-title"><span>📍</span> Confirm GPS Location Update</h3>
+        <button type="button" id="btn-close-loc-modal" class="btn btn-sm btn-outline">✕</button>
+      </div>
+      <div class="card-body">
+        <p style="color: var(--text-primary); margin-bottom: 0.75rem;">
+          WaySafe will acquire your current GPS coordinates using the browser Geolocation API.
+        </p>
+        <div id="loc-preview-box" style="background-color: var(--surface-alt); padding: 0.85rem 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 1rem; font-size: 0.85rem;">
+          <div><strong>Coordinates:</strong> <span id="loc-preview-coords">Acquiring...</span></div>
+          <div><strong>Accuracy:</strong> <span id="loc-preview-acc">--</span></div>
+          <div><strong>Timestamp:</strong> <span id="loc-preview-time">--</span></div>
+        </div>
+        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0;">
+          Your coordinates will be saved to your active journey check-in record and displayed on your map.
+        </p>
+      </div>
+      <div class="card-footer" style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+        <button type="button" id="btn-cancel-loc-modal" class="btn btn-secondary">Cancel</button>
+        <button type="button" id="btn-confirm-loc-modal" class="btn btn-primary">
+          Confirm & Save Location
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SOS Emergency Modal -->
+  <div class="modal-backdrop" id="sos-modal">
+    <div class="modal-dialog">
+      <div class="card-header" style="background-color: var(--danger-50); border-bottom: 1px solid var(--danger-100);">
+        <h3 class="card-title" style="color: var(--danger-600);">
+          <span>🚨</span> Emergency Safety Alert
+        </h3>
+        <button type="button" id="btn-close-sos" class="btn btn-sm btn-outline">✕</button>
+      </div>
+      <div class="card-body">
+        <p style="margin-bottom: 1rem; color: var(--text-secondary);">
+          Choose an emergency contact to reach immediately. WaySafe pre-formats an SMS with your last known location and battery level.
+        </p>
+        <div id="sos-contacts-list" style="display: flex; flex-direction: column; gap: 0.75rem;">
+          <p style="color: var(--text-muted);">Loading emergency contacts...</p>
+        </div>
+      </div>
+      <div class="card-footer">
+        <button type="button" id="btn-dismiss-sos" class="btn btn-secondary">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Emergency QR Code Modal -->
+  <div class="modal-backdrop" id="emergency-qr-modal">
+    <div class="modal-dialog" style="max-width: 540px;">
+      <div class="card-header" style="background: linear-gradient(135deg, var(--navy-900), #1e293b); color: #fff;">
+        <h3 class="card-title" style="color: #38bdf8;">
+          <span>📱</span> Emergency Trip QR Code
+        </h3>
+        <button type="button" id="btn-close-qr-modal" class="btn btn-sm btn-outline" style="color: #fff; border-color: #475569;">✕</button>
+      </div>
+      <div class="card-body" style="padding: 1.5rem;">
+        <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 1.25rem;">
+          Anyone who scans this QR code will see a dedicated public emergency information page. Your private credentials, account history, and passwords are never exposed.
+        </p>
+
+        <!-- QR Display Box -->
+        <div id="qr-preview-container" style="text-align: center; padding: 1.25rem; background: #fff; border-radius: var(--radius-lg); border: 2px solid var(--border-subtle); margin-bottom: 1.25rem; box-shadow: var(--shadow-sm);">
+          <div id="qr-spinner" class="spinner" style="margin: 2rem auto;"></div>
+          <div id="qr-revoked-msg" style="display: none; padding: 2rem 1rem; color: var(--danger-600); font-weight: 700;">
+            ⚠️ Emergency sharing link has been revoked. Public access is disabled.
+          </div>
+          <img id="qr-image" src="" alt="Emergency Trip QR Code" style="display: none; max-width: 220px; width: 100%; height: auto; margin: 0 auto; border-radius: 8px;" />
+          <div id="qr-enlarged-view" style="display: none; margin-top: 1rem;">
+            <img id="qr-enlarged-img" src="" alt="Enlarged QR Code" style="max-width: 360px; width: 100%; height: auto; border: 2px solid #0f172a; border-radius: 10px;" />
+          </div>
+        </div>
+
+        <!-- Display, Enlarge & Download Actions -->
+        <div id="qr-action-buttons-group" style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; margin-bottom: 1.5rem;">
+          <button type="button" id="btn-enlarge-qr" class="btn btn-sm btn-navy">
+            🔍 Enlarge QR
+          </button>
+          <a id="btn-download-qr" href="#" class="btn btn-sm btn-teal" download="waysafe-emergency-qr.png">
+            📥 Download PNG
+          </a>
+          <button type="button" id="btn-copy-public-link" class="btn btn-sm btn-secondary">
+            📋 Copy Link
+          </button>
+        </div>
+
+        <!-- Consent Settings Section -->
+        <div style="background: var(--surface-alt); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1.25rem;">
+          <div style="font-weight: 700; font-size: 0.85rem; color: var(--navy-900); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.35rem;">
+            <span>🔒</span> Emergency Sharing Consent Controls
+          </div>
+          <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+            Explicitly choose which data is visible to responders scanning this QR code:
+          </p>
+          
+          <div style="display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.85rem;">
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+              <input type="checkbox" id="consent-share-location" checked />
+              <span>Share Last Known Location &amp; Timestamp</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+              <input type="checkbox" id="consent-share-contact" checked />
+              <span>Share Emergency Contact Name &amp; Phone</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+              <input type="checkbox" id="consent-share-eta" checked />
+              <span>Share Estimated Arrival Time (ETA)</span>
+            </label>
+            
+            <div style="margin-top: 0.5rem;">
+              <label for="consent-display-name" style="font-size: 0.78rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 0.25rem;">
+                Responder Display Name (Optional)
+              </label>
+              <input type="text" id="consent-display-name" class="form-input form-input-sm" placeholder="e.g. Alex M." style="font-size: 0.82rem; padding: 0.35rem 0.65rem;" />
+            </div>
+          </div>
+
+          <div style="margin-top: 0.75rem; display: flex; justify-content: flex-end;">
+            <button type="button" id="btn-save-consent" class="btn btn-sm btn-outline">
+              Save Consent Settings
+            </button>
+          </div>
+        </div>
+
+        <!-- Danger Zone: Revoke Link -->
+        <div style="border-top: 1px solid var(--border-subtle); padding-top: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+          <span style="font-size: 0.75rem; color: var(--danger-600);">
+            Need to disable this QR code immediately?
+          </span>
+          <button type="button" id="btn-revoke-qr" class="btn btn-sm btn-outline-danger">
+            🛑 Revoke QR Link
+          </button>
+        </div>
+      </div>
+      <div class="card-footer" style="display: flex; justify-content: flex-end;">
+        <button type="button" id="btn-dismiss-qr-modal" class="btn btn-secondary">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div>
+        <div style="font-weight: 700; color: var(--navy-900);">WaySafe — Active Journey & Check-In System</div>
+        <div class="footer-disclaimer">
+          OpenStreetMap coordinates &copy; OpenStreetMap contributors. Client authentication via Supabase Auth.
+        </div>
+      </div>
+      <ul class="footer-links">
+        <li><a href="dashboard.html">Dashboard</a></li>
+        <li><a href="trip-setup.html">Plan Journey</a></li>
+        <li><a href="emergency-contacts.html">Contacts</a></li>
+      </ul>
+    </div>
+  </footer>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script type="module" src="js/app.js"></script>
+
+  <script type="module">
+    import { tripsService } from './js/trips.js';
+    import { contactsService } from './js/contacts.js';
+    import { batteryMonitor } from './js/battery.js';
+    import { locationService } from './js/location.js';
+    import { showToast, formatDate, escapeHtml } from './js/app.js';
+    import { requireAuth, getCurrentUser, logout } from './js/auth.js';
+
+    let map = null;
+    let markersLayer = null;
+    let userLocationMarker = null;
+    let currentTrip = null;
+    let currentBattery = null;
+    let lastAcquiredLocation = null;
+    let contactsList = [];
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const tripId = urlParams.get('id');
+
+    // 1. Initialize Map with OpenStreetMap and Tile Failure Handling
+    function initMap() {
+      try {
+        map = L.map('status-map').setView([20, 0], 2);
+
+        const tileLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors'
+        });
+
+        // Handle tile-loading failures gracefully
+        tileLayer.on('tileerror', function(error) {
+          console.warn('[Leaflet] Tile loading notice:', error);
+          const warnEl = document.getElementById('map-tile-warning');
+          if (warnEl) warnEl.style.display = 'block';
+        });
+
+        tileLayer.addTo(map);
+        markersLayer = L.layerGroup().addTo(map);
+      } catch (err) {
+        console.error('Failed to initialize Leaflet map:', err);
+      }
+    }
+
+    // 2. Load Journey and Display Required Elements
+    async function loadTrip() {
+      try {
+        let trip;
+        if (tripId) {
+          trip = await tripsService.getById(tripId);
+        } else {
+          trip = await tripsService.getActive();
+        }
+
+        if (!trip) {
+          showToast('No active journey found. Returning to dashboard...', 'warning');
+          setTimeout(() => window.location.href = 'dashboard.html', 1500);
+          return;
+        }
+
+        currentTrip = trip;
+        await renderTripDetails(trip);
+        await loadCheckins(trip.id);
+        await checkLocationPermissionStatus();
+      } catch (err) {
+        console.error('Error loading journey:', err);
+        showToast('Error loading journey: ' + err.message, 'error');
+      }
+    }
+
+    // 3. Render 8 Required Active Trip Data Elements
+    async function renderTripDetails(trip) {
+      const tripTitle = trip.tripName || trip.title || 'Active Journey';
+      document.getElementById('trip-title-header').textContent = tripTitle;
+
+      const dest = trip.destination;
+      const destName = typeof dest === 'object' ? (dest.name || dest.address || 'Destination') : String(dest || 'Destination');
+      document.getElementById('trip-destination-header').textContent = `Destination: ${destName}`;
+      document.getElementById('trip-started-time').textContent = `Started ${formatDate(trip.startedAt || trip.departureTime || trip.createdAt)}`;
+
+      // 1. Destination Card
+      document.getElementById('disp-destination').textContent = destName;
+      document.getElementById('disp-dest-details').textContent = typeof dest === 'object' && dest.address ? dest.address : 'Target Destination';
+
+      // 2. Departure Time Card
+      const departureTime = trip.departureTime || trip.startedAt || trip.createdAt;
+      document.getElementById('disp-departure-time').textContent = formatDate(departureTime);
+      document.getElementById('disp-depart-details').textContent = trip.startedAt ? 'Journey commenced' : 'Scheduled start';
+
+      // 3. Estimated Arrival Card
+      if (trip.estimatedArrival) {
+        document.getElementById('disp-estimated-arrival').textContent = formatDate(trip.estimatedArrival);
+        const etaDate = new Date(trip.estimatedArrival);
+        const diffMinutes = Math.round((etaDate.getTime() - Date.now()) / (1000 * 60));
+        if (diffMinutes > 0) {
+          document.getElementById('disp-eta-remaining').textContent = `Arriving in ~${diffMinutes} minutes`;
+        } else {
+          document.getElementById('disp-eta-remaining').textContent = 'Arrival time reached';
+        }
+      } else {
+        document.getElementById('disp-estimated-arrival').textContent = 'Flexible ETA';
+        document.getElementById('disp-eta-remaining').textContent = 'No fixed ETA specified';
+      }
+
+      // 4. Trip Status Card
+      const statusPill = document.getElementById('status-pill');
+      const dispStatus = document.getElementById('disp-trip-status');
+      const statusText = (trip.status || 'active').toUpperCase();
+      const badgeClass = tripsService.getBadgeClass(trip.status);
+
+      statusPill.textContent = statusText;
+      statusPill.className = `badge ${badgeClass}`;
+      dispStatus.innerHTML = `<span class="badge ${badgeClass}">${statusText}</span>`;
+      document.getElementById('disp-status-details').textContent = trip.status === 'completed' ? 'Journey successfully ended' : 'Journey actively monitored';
+
+      // 5. Trusted Contact Card
+      await renderTrustedContactCard(trip.trustedContactId);
+
+      // 6 & 7. Last Check-In & Last Location Update
+      updateLastCheckinAndLocationCards(trip);
+
+      // Plot Destination on Map (Never pretend destination is user's location)
+      if (map && trip.destination && typeof trip.destination === 'object' && locationService.isValidCoordinates(trip.destination.latitude, trip.destination.longitude)) {
+        const destMarker = L.marker([trip.destination.latitude, trip.destination.longitude])
+          .bindPopup(`<b>🏁 Destination</b><br>${escapeHtml(destName)}`);
+        destMarker.addTo(markersLayer);
+        map.setView([trip.destination.latitude, trip.destination.longitude], 13);
+      }
+    }
+
+    async function renderTrustedContactCard(contactId) {
+      const contactValEl = document.getElementById('disp-trusted-contact');
+      const contactSubEl = document.getElementById('disp-contact-details');
+
+      try {
+        contactsList = await contactsService.list();
+        let contact = null;
+        if (contactId) {
+          contact = contactsList.find(c => c.id === contactId);
+        }
+        if (!contact && contactsList.length > 0) {
+          contact = contactsList.find(c => c.isPrimary) || contactsList[0];
+        }
+
+        if (contact) {
+          contactValEl.textContent = contact.name;
+          contactSubEl.innerHTML = `
+            ${escapeHtml(contact.relationship || 'Emergency Contact')} • 
+            <a href="${contactsService.createTelLink(contact.phone)}" style="color: var(--teal-600); font-weight: 600;">${escapeHtml(contact.phone)}</a>
+          `;
+        } else {
+          contactValEl.textContent = 'None Assigned';
+          contactSubEl.innerHTML = '<a href="emergency-contacts.html" style="color: var(--teal-600);">+ Link Trusted Contact</a>';
+        }
+      } catch (e) {
+        contactValEl.textContent = 'Contact list unavailable';
+      }
+    }
+
+    function updateLastCheckinAndLocationCards(trip, latestCheckin = null) {
+      const checkinValEl = document.getElementById('disp-last-checkin');
+      const checkinSubEl = document.getElementById('disp-last-checkin-msg');
+      const locValEl = document.getElementById('disp-last-location');
+      const locSubEl = document.getElementById('disp-last-location-time');
+
+      const checkinTime = latestCheckin?.checkedInAt || latestCheckin?.createdAt || trip.lastCheckInAt || trip.last_check_in_at;
+      if (checkinTime) {
+        checkinValEl.textContent = formatDate(checkinTime);
+        checkinSubEl.textContent = latestCheckin?.message || 'Verified server check-in';
+      } else {
+        checkinValEl.textContent = 'No check-in yet';
+        checkinSubEl.textContent = 'Tap "I\'m Safe" above';
+      }
+
+      const loc = latestCheckin?.location || lastAcquiredLocation;
+      if (loc && locationService.isValidCoordinates(loc.latitude, loc.longitude)) {
+        locValEl.textContent = locationService.formatCoordinates(loc.latitude, loc.longitude);
+        const freshness = locationService.isStale(loc.timestamp || checkinTime, 5) ? 'Stale (>5m)' : 'Fresh GPS';
+        locSubEl.textContent = `${freshness} • ±${loc.accuracy || 15}m accuracy`;
+      } else {
+        locValEl.textContent = 'Location unavailable';
+        locSubEl.textContent = 'Tap "Update Location"';
+      }
+    }
+
+    // 8. Location Permission Status Checker
+    async function checkLocationPermissionStatus() {
+      const permBadge = document.getElementById('disp-permission-status');
+      const permDetail = document.getElementById('disp-permission-detail');
+
+      if (!locationService.isSupported()) {
+        permBadge.innerHTML = '<span class="badge badge-neutral">UNSUPPORTED</span>';
+        permDetail.textContent = 'Geolocation API not supported by browser';
+        return;
+      }
+
+      if (navigator.permissions && navigator.permissions.query) {
+        try {
+          const result = await navigator.permissions.query({ name: 'geolocation' });
+          updatePermissionBadge(result.state);
+          result.onchange = () => updatePermissionBadge(result.state);
+        } catch (e) {
+          permBadge.innerHTML = '<span class="badge badge-teal">PROMPT AVAILABLE</span>';
+          permDetail.textContent = 'Click "Update Location" to grant';
+        }
+      } else {
+        permBadge.innerHTML = '<span class="badge badge-teal">PROMPT AVAILABLE</span>';
+        permDetail.textContent = 'Click "Update Location" to grant';
+      }
+    }
+
+    function updatePermissionBadge(state) {
+      const permBadge = document.getElementById('disp-permission-status');
+      const permDetail = document.getElementById('disp-permission-detail');
+
+      if (state === 'granted') {
+        permBadge.innerHTML = '<span class="badge badge-teal">GRANTED (LIVE GPS)</span>';
+        permDetail.textContent = 'Explicit location permission active';
+      } else if (state === 'denied') {
+        permBadge.innerHTML = '<span class="badge badge-danger">DENIED (BLOCKED)</span>';
+        permDetail.textContent = 'Location access blocked in browser settings';
+      } else {
+        permBadge.innerHTML = '<span class="badge badge-warning">PROMPT (CLICK TO ALLOW)</span>';
+        permDetail.textContent = 'Permission requested upon check-in';
+      }
+    }
+
+    // 4. Load Check-Ins and Plot Valid Markers on Map
+    async function loadCheckins(tId) {
+      try {
+        const checkins = await tripsService.getCheckins(tId);
+        const timeline = document.getElementById('checkin-timeline');
+
+        if (!checkins || checkins.length === 0) {
+          timeline.innerHTML = `<p style="color: var(--text-muted); font-size: 0.9rem;">No check-ins yet. Tap "I'm Safe" to record your first check-in.</p>`;
+          return;
+        }
+
+        const latest = checkins[0];
+        updateLastCheckinAndLocationCards(currentTrip, latest);
+
+        timeline.innerHTML = checkins.map((chk) => {
+          let dotClass = 'dot-teal';
+          if (chk.type === 'low_battery_warning') dotClass = 'dot-warning';
+          if (chk.type === 'sos_alert') dotClass = 'dot-danger';
+          if (chk.type === 'safe_arrival' || chk.type === 'im_safe') dotClass = 'dot-success';
+
+          return `
+            <div class="timeline-item">
+              <div class="timeline-dot ${dotClass}"></div>
+              <div class="timeline-content">
+                <div class="timeline-header">
+                  <span class="timeline-title">${escapeHtml(chk.message || "I'm safe")}</span>
+                  <span class="timeline-time">${formatDate(chk.checkedInAt || chk.createdAt)}</span>
+                </div>
+                <div class="timeline-meta">
+                  ${chk.batteryLevel !== null ? `<span>🔋 ${chk.batteryLevel}%</span>` : ''}
+                  ${chk.location && locationService.isValidCoordinates(chk.location.latitude, chk.location.longitude) 
+                    ? `<span>📍 ${locationService.formatCoordinates(chk.location.latitude, chk.location.longitude)}</span>` 
+                    : ''}
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        // Plot User's actual location ONLY if valid coordinates exist
+        const checkinWithLoc = checkins.find(c => c.location && locationService.isValidCoordinates(c.location.latitude, c.location.longitude));
+        if (checkinWithLoc && checkinWithLoc.location) {
+          plotActualUserLocation(checkinWithLoc.location.latitude, checkinWithLoc.location.longitude, checkinWithLoc.location.accuracy);
+        }
+      } catch (err) {
+        console.error('Error loading check-ins:', err);
+      }
+    }
+
+    // Plot actual user coordinates with distinct user icon (NEVER pretend destination is user)
+    function plotActualUserLocation(lat, lng, accuracy = 20) {
+      if (!map || !locationService.isValidCoordinates(lat, lng)) return;
+
+      if (userLocationMarker) {
+        markersLayer.removeLayer(userLocationMarker);
+      }
+
+      // Draw blue circle marker for actual user location
+      userLocationMarker = L.circleMarker([lat, lng], {
+        radius: 9,
+        color: '#0D9488',
+        fillColor: '#14B8A6',
+        fillOpacity: 0.9,
+        weight: 3
+      }).bindPopup(`<b>📍 Your Verified Location</b><br>Accuracy: ±${Math.round(accuracy)}m<br>${locationService.formatCoordinates(lat, lng)}`).openPopup();
+
+      userLocationMarker.addTo(markersLayer);
+      map.setView([lat, lng], 14);
+
+      const mapUpdateEl = document.getElementById('map-last-updated');
+      if (mapUpdateEl) {
+        mapUpdateEl.textContent = `Last map sync: ${new Date().toLocaleTimeString()} (GPS Verified)`;
+      }
+    }
+
+    // =========================================================================
+    // 5. Action 1: "I'm Safe" Action
+    // =========================================================================
+    async function handleImSafeAction() {
+      if (!currentTrip) return;
+
+      const btn = document.getElementById('btn-im-safe');
+      btn.disabled = true;
+      btn.innerHTML = '<span>⏳</span> Saving Check-In...';
+
+      try {
+        const bat = currentBattery ? currentBattery.level : null;
+        const chg = currentBattery ? currentBattery.isCharging : null;
+
+        const checkinResult = await tripsService.recordCheckin(currentTrip.id, {
+          type: 'im_safe',
+          message: "I'm safe",
+          batteryLevel: bat,
+          isCharging: chg,
+          location: lastAcquiredLocation,
+          consent: Boolean(lastAcquiredLocation)
+        });
+
+        // Show prominent confirmation modal
+        const modal = document.getElementById('im-safe-modal');
+        document.getElementById('modal-safe-time').textContent = new Date().toLocaleTimeString();
+        document.getElementById('modal-safe-trip').textContent = currentTrip.tripName || currentTrip.title || 'Current Journey';
+        document.getElementById('modal-safe-battery').textContent = bat !== null ? `${bat}% (${chg ? 'Charging' : 'Discharging'})` : 'Sensor unavailable';
+        document.getElementById('modal-safe-location').textContent = lastAcquiredLocation 
+          ? locationService.formatCoordinates(lastAcquiredLocation.latitude, lastAcquiredLocation.longitude)
+          : 'Not included';
+
+        modal.classList.add('active');
+        showToast("Check-in confirmed! You're logged as safe.", 'success');
+
+        // Update cards & timeline immediately
+        updateLastCheckinAndLocationCards(currentTrip, checkinResult);
+        await loadCheckins(currentTrip.id);
+      } catch (err) {
+        showToast(err.message || 'Failed to record check-in', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span>✅</span> I\'m Safe';
+      }
+    }
+
+    // =========================================================================
+    // 6. Action 2: "Update Location" Action with Consent Flow
+    // =========================================================================
+    async function handleUpdateLocationAction() {
+      if (!currentTrip) return;
+
+      const modal = document.getElementById('update-location-modal');
+      const coordsEl = document.getElementById('loc-preview-coords');
+      const accEl = document.getElementById('loc-preview-acc');
+      const timeEl = document.getElementById('loc-preview-time');
+
+      coordsEl.textContent = 'Acquiring GPS fix from device sensors...';
+      accEl.textContent = 'Measuring...';
+      timeEl.textContent = '--';
+      modal.classList.add('active');
+
+      try {
+        const pos = await locationService.getCurrentPosition();
+        lastAcquiredLocation = pos;
+
+        coordsEl.textContent = locationService.formatCoordinates(pos.latitude, pos.longitude);
+        accEl.textContent = `±${pos.accuracy}m`;
+        timeEl.textContent = new Date(pos.timestamp).toLocaleTimeString();
+        checkLocationPermissionStatus();
+      } catch (err) {
+        coordsEl.textContent = `Error: ${err.message}`;
+        accEl.textContent = 'Unavailable';
+        showToast(err.message || 'Failed to obtain GPS fix', 'error');
+        checkLocationPermissionStatus();
+      }
+    }
+
+    async function confirmAndSaveLocation() {
+      if (!currentTrip || !lastAcquiredLocation) {
+        showToast('Please acquire valid coordinates first', 'warning');
+        return;
+      }
+
+      const confirmBtn = document.getElementById('btn-confirm-loc-modal');
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = 'Saving...';
+
+      try {
+        const bat = currentBattery ? currentBattery.level : null;
+        const chg = currentBattery ? currentBattery.isCharging : null;
+
+        const checkinResult = await tripsService.recordCheckin(currentTrip.id, {
+          type: 'location_update',
+          message: `Location update: ${locationService.formatCoordinates(lastAcquiredLocation.latitude, lastAcquiredLocation.longitude)}`,
+          batteryLevel: bat,
+          isCharging: chg,
+          location: lastAcquiredLocation,
+          consent: true,
+          locationConsent: true
+        });
+
+        // Plot actual location on map
+        plotActualUserLocation(lastAcquiredLocation.latitude, lastAcquiredLocation.longitude, lastAcquiredLocation.accuracy);
+
+        // Update cards
+        updateLastCheckinAndLocationCards(currentTrip, checkinResult);
+        await loadCheckins(currentTrip.id);
+
+        document.getElementById('update-location-modal').classList.remove('active');
+        showToast('Location updated and recorded with your consent!', 'success');
+      } catch (err) {
+        showToast(err.message || 'Error recording location check-in', 'error');
+      } finally {
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = 'Confirm & Save Location';
+      }
+    }
+
+    // =========================================================================
+    // 7. Action 4: "End Trip" Action
+    // =========================================================================
+    async function handleEndTripAction() {
+      if (!currentTrip) return;
+      const confirmEnd = confirm('Are you sure you want to end and safely complete this trip? This will record safe arrival.');
+      if (!confirmEnd) return;
+
+      const endBtn = document.getElementById('btn-end-trip');
+      endBtn.disabled = true;
+      endBtn.textContent = 'Ending Trip...';
+
+      try {
+        await tripsService.end(currentTrip.id, {
+          message: 'Safe arrival confirmed. Journey ended safely.'
+        });
+
+        showToast('Journey completed safely!', 'success');
+        setTimeout(() => {
+          window.location.href = `trip-completed.html?id=${currentTrip.id}`;
+        }, 600);
+      } catch (err) {
+        showToast(err.message || 'Failed to complete trip', 'error');
+        endBtn.disabled = false;
+        endBtn.innerHTML = '<span>🏁</span> End Trip';
+      }
+    }
+
+    // =========================================================================
+    // 8. Battery Monitoring Setup
+    // =========================================================================
+    async function setupBattery() {
+      const res = await batteryMonitor.init();
+      if (res && res.supported && res.state) {
+        updateBatteryUI(res.state);
+        batteryMonitor.onChange(state => updateBatteryUI(state));
+      } else {
+        document.getElementById('battery-status-pct').textContent = '--%';
+        document.getElementById('battery-status-detail').textContent = 'Battery API restricted on this browser.';
+      }
+    }
+
+    function updateBatteryUI(state) {
+      if (!state) return;
+      currentBattery = state;
+      const pctEl = document.getElementById('battery-status-pct');
+      const fillEl = document.getElementById('battery-status-fill');
+      const detailEl = document.getElementById('battery-status-detail');
+      const stateBadge = document.getElementById('charging-state-badge');
+      const warningBanner = document.getElementById('low-battery-banner');
+
+      pctEl.textContent = `${state.level}%`;
+      fillEl.style.width = `${Math.min(100, Math.max(5, state.level))}%`;
+      fillEl.classList.remove('battery-low', 'battery-critical');
+
+      if (state.isCritical) fillEl.classList.add('battery-critical');
+      else if (state.isLow) fillEl.classList.add('battery-low');
+
+      stateBadge.textContent = state.isCharging ? '⚡ CHARGING' : 'ON BATTERY';
+      detailEl.textContent = state.isCharging ? 'Connected to external power' : 'Discharging from device battery';
+
+      if (state.level <= 20) {
+        warningBanner.style.display = 'flex';
+      } else {
+        warningBanner.style.display = 'none';
+      }
+    }
+
+    // =========================================================================
+    // 9. SOS Modal Setup
+    // =========================================================================
+    async function setupSosModal() {
+      const modal = document.getElementById('sos-modal');
+      const openBtn = document.getElementById('btn-sos-modal');
+      const closeBtn = document.getElementById('btn-close-sos');
+      const dismissBtn = document.getElementById('btn-dismiss-sos');
+      const container = document.getElementById('sos-contacts-list');
+
+      openBtn?.addEventListener('click', async () => {
+        modal.classList.add('active');
+        if (contactsList.length === 0) {
+          contactsList = await contactsService.list();
+        }
+
+        if (contactsList.length === 0) {
+          container.innerHTML = `
+            <p style="color: var(--text-muted);">No emergency contacts configured yet. <a href="emergency-contacts.html">Add contacts</a></p>
+          `;
+          return;
+        }
+
+        container.innerHTML = contactsList.map(c => {
+          const emergencyMsg = contactsService.formatEmergencyMessage({
+            contactName: c.name,
+            tripTitle: currentTrip?.tripName || currentTrip?.title,
+            batteryLevel: currentBattery?.level,
+            location: lastAcquiredLocation,
+            note: 'Emergency alert requested from WaySafe'
+          });
+
+          const smsLink = contactsService.createSmsLink(c.phone, emergencyMsg);
+          const telLink = contactsService.createTelLink(c.phone);
+
+          return `
+            <div style="padding: 0.85rem; background: var(--surface-alt); border-radius: var(--radius-md); border: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+              <div>
+                <div style="font-weight: 700; color: var(--navy-900);">${escapeHtml(c.name)} ${c.isPrimary ? '<span class="badge badge-teal">PRIMARY</span>' : ''}</div>
+                <div style="font-size: 0.8rem; color: var(--text-muted);">${escapeHtml(c.phone)}</div>
+              </div>
+              <div style="display: flex; gap: 0.5rem;">
+                <a href="${smsLink}" class="btn btn-sm btn-navy">💬 Pre-fill SMS</a>
+                <a href="${telLink}" class="btn btn-sm btn-outline-danger">📞 Call</a>
+              </div>
+            </div>
+          `;
+        }).join('');
+      });
+
+      const closeModal = () => modal.classList.remove('active');
+      closeBtn?.addEventListener('click', closeModal);
+      dismissBtn?.addEventListener('click', closeModal);
+    }
+
+    // =========================================================================
+    // 10. Emergency Trip QR Code Setup
+    // =========================================================================
+    let currentShareTokenData = null;
+
+    async function setupQrModal() {
+      const modal = document.getElementById('emergency-qr-modal');
+      const openBtn = document.getElementById('btn-emergency-qr');
+      const closeBtn = document.getElementById('btn-close-qr-modal');
+      const dismissBtn = document.getElementById('btn-dismiss-qr-modal');
+      const enlargeBtn = document.getElementById('btn-enlarge-qr');
+      const downloadLink = document.getElementById('btn-download-qr');
+      const copyBtn = document.getElementById('btn-copy-public-link');
+      const saveConsentBtn = document.getElementById('btn-save-consent');
+      const revokeBtn = document.getElementById('btn-revoke-qr');
+
+      const qrSpinner = document.getElementById('qr-spinner');
+      const qrImg = document.getElementById('qr-image');
+      const qrRevokedMsg = document.getElementById('qr-revoked-msg');
+      const qrEnlargedView = document.getElementById('qr-enlarged-view');
+      const qrEnlargedImg = document.getElementById('qr-enlarged-img');
+      const actionGroup = document.getElementById('qr-action-buttons-group');
+
+      const consentLoc = document.getElementById('consent-share-location');
+      const consentContact = document.getElementById('consent-share-contact');
+      const consentEta = document.getElementById('consent-share-eta');
+      const consentName = document.getElementById('consent-display-name');
+
+      async function loadShareDetails() {
+        if (!currentTrip) return;
+        qrSpinner.style.display = 'block';
+        qrImg.style.display = 'none';
+        qrRevokedMsg.style.display = 'none';
+        qrEnlargedView.style.display = 'none';
+
+        try {
+          const data = await tripsService.getShareToken(currentTrip.id);
+          currentShareTokenData = data;
+
+          qrSpinner.style.display = 'none';
+
+          if (data.shareRevoked) {
+            qrRevokedMsg.style.display = 'block';
+            actionGroup.style.display = 'none';
+            revokeBtn.disabled = true;
+            revokeBtn.textContent = 'Already Revoked';
+          } else {
+            qrImg.src = data.qrCodeDataUrl;
+            qrImg.style.display = 'block';
+            qrEnlargedImg.src = data.qrCodeDataUrl;
+            actionGroup.style.display = 'flex';
+            revokeBtn.disabled = false;
+            revokeBtn.textContent = '🛑 Revoke QR Link';
+
+            // Set download URL
+            const protocol = window.location.protocol;
+            const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            const apiBase = (!isLocal || window.location.port === '5000' || !window.location.port) ? '' : `${protocol}//${window.location.hostname}:5000`;
+            downloadLink.href = `${apiBase}/api/trips/${currentTrip.id}/qr?download=true`;
+
+            // Populate consent settings
+            const settings = data.shareSettings || {};
+            consentLoc.checked = settings.share_location !== false;
+            consentContact.checked = settings.share_contact !== false;
+            consentEta.checked = settings.share_eta !== false;
+            consentName.value = settings.display_name || '';
+          }
+        } catch (err) {
+          qrSpinner.style.display = 'none';
+          showToast(err.message || 'Failed to load emergency QR code', 'danger');
+        }
+      }
+
+      openBtn?.addEventListener('click', async () => {
+        modal.classList.add('active');
+        await loadShareDetails();
+      });
+
+      const closeModal = () => modal.classList.remove('active');
+      closeBtn?.addEventListener('click', closeModal);
+      dismissBtn?.addEventListener('click', closeModal);
+
+      // Enlarge toggle
+      enlargeBtn?.addEventListener('click', () => {
+        if (qrEnlargedView.style.display === 'none') {
+          qrEnlargedView.style.display = 'block';
+          qrImg.style.display = 'none';
+          enlargeBtn.textContent = 'Standard Size';
+        } else {
+          qrEnlargedView.style.display = 'none';
+          qrImg.style.display = 'block';
+          enlargeBtn.textContent = '🔍 Enlarge QR';
+        }
+      });
+
+      // Copy link
+      copyBtn?.addEventListener('click', async () => {
+        if (!currentShareTokenData || !currentShareTokenData.shareUrl) return;
+        try {
+          await navigator.clipboard.writeText(currentShareTokenData.shareUrl);
+          showToast('Public emergency trip link copied to clipboard!', 'success');
+        } catch (e) {
+          prompt('Copy public emergency trip link:', currentShareTokenData.shareUrl);
+        }
+      });
+
+      // Save consent
+      saveConsentBtn?.addEventListener('click', async () => {
+        if (!currentTrip) return;
+        saveConsentBtn.disabled = true;
+        saveConsentBtn.textContent = 'Saving...';
+        try {
+          await tripsService.updateShareSettings(currentTrip.id, {
+            share_location: consentLoc.checked,
+            share_contact: consentContact.checked,
+            share_eta: consentEta.checked,
+            display_name: consentName.value.trim()
+          });
+          showToast('Emergency sharing consent settings updated!', 'success');
+        } catch (err) {
+          showToast(err.message || 'Failed to update consent settings', 'danger');
+        } finally {
+          saveConsentBtn.disabled = false;
+          saveConsentBtn.textContent = 'Save Consent Settings';
+        }
+      });
+
+      // Revoke link
+      revokeBtn?.addEventListener('click', async () => {
+        if (!currentTrip) return;
+        const confirmRevoke = confirm('Are you sure you want to revoke this emergency sharing QR code? Anyone who scanned it will no longer be able to see this trip.');
+        if (!confirmRevoke) return;
+
+        revokeBtn.disabled = true;
+        revokeBtn.textContent = 'Revoking...';
+        try {
+          await tripsService.revokeShareToken(currentTrip.id);
+          showToast('Emergency QR sharing link revoked successfully.', 'info');
+          await loadShareDetails();
+        } catch (err) {
+          showToast(err.message || 'Failed to revoke link', 'danger');
+          revokeBtn.disabled = false;
+          revokeBtn.textContent = '🛑 Revoke QR Link';
+        }
+      });
+    }
+
+    // Lifecycle Initialization
+    document.addEventListener('DOMContentLoaded', async () => {
+      const isAuth = await requireAuth();
+      if (!isAuth) return;
+
+      const user = getCurrentUser();
+      const authContainer = document.getElementById('nav-auth-container');
+      if (user && authContainer) {
+        const name = user.displayName || user.email?.split('@')[0] || 'Traveler';
+        const initial = (name.charAt(0) || 'U').toUpperCase();
+        authContainer.innerHTML = `
+          <div class="user-pill">
+            <div class="user-avatar">${escapeHtml(initial)}</div>
+            <span>${escapeHtml(name)}</span>
+          </div>
+          <button type="button" id="btn-header-logout" class="btn btn-sm btn-outline">Log Out</button>
+        `;
+        document.getElementById('btn-header-logout')?.addEventListener('click', async () => {
+          await logout();
+          window.location.href = 'login.html';
+        });
+      }
+
+      initMap();
+      await loadTrip();
+      setupBattery();
+      setupSosModal();
+      setupQrModal();
+
+      // Action Handlers
+      document.getElementById('btn-im-safe')?.addEventListener('click', handleImSafeAction);
+      document.getElementById('btn-update-location')?.addEventListener('click', handleUpdateLocationAction);
+      document.getElementById('btn-confirm-loc-modal')?.addEventListener('click', confirmAndSaveLocation);
+      document.getElementById('btn-cancel-loc-modal')?.addEventListener('click', () => {
+        document.getElementById('update-location-modal').classList.remove('active');
+      });
+      document.getElementById('btn-close-loc-modal')?.addEventListener('click', () => {
+        document.getElementById('update-location-modal').classList.remove('active');
+      });
+      document.getElementById('btn-end-trip')?.addEventListener('click', handleEndTripAction);
+      document.getElementById('btn-refresh-checkins')?.addEventListener('click', () => {
+        if (currentTrip) loadCheckins(currentTrip.id);
+      });
+
+      // Modal Ok button
+      document.getElementById('btn-ok-safe-modal')?.addEventListener('click', () => {
+        document.getElementById('im-safe-modal').classList.remove('active');
+      });
+      document.getElementById('btn-close-safe-modal')?.addEventListener('click', () => {
+        document.getElementById('im-safe-modal').classList.remove('active');
+      });
+    });
+  </script>
+</body>
+</html>

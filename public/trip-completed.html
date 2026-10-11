@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Journey Completed Safely — WaySafe</title>
+  <meta name="description" content="Journey completion summary, safe arrival confirmation, and travel history report.">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+
+  <!-- Shared Header -->
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="index.html" class="brand-link">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+        </div>
+        <div class="brand-name">Way<span>Safe</span></div>
+      </a>
+
+      <button class="mobile-nav-toggle" id="mobile-nav-toggle" aria-label="Toggle navigation">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+      </button>
+
+      <nav class="main-nav" id="main-nav">
+        <ul class="nav-links">
+          <li><a href="dashboard.html" class="nav-link">Dashboard</a></li>
+          <li><a href="trip-setup.html" class="nav-link">Plan Journey</a></li>
+          <li><a href="emergency-travel.html" class="nav-link">Emergency Travel</a></li>
+          <li><a href="accessibility-planner.html" class="nav-link">Accessibility</a></li>
+          <li><a href="low-battery.html" class="nav-link">Low-Battery Guide</a></li>
+          <li><a href="emergency-contacts.html" class="nav-link">Contacts</a></li>
+          <li><a href="trip-history.html" class="nav-link">History</a></li>
+        </ul>
+
+        <div class="nav-auth" id="nav-auth-container"></div>
+      </nav>
+    </div>
+  </header>
+
+  <main class="main-content" style="max-width: 760px; padding: 2rem 1rem;">
+    <!-- Loading State -->
+    <div id="completion-loading" class="card" style="text-align: center; padding: 3rem 1.5rem;">
+      <div style="font-size: 2.5rem; margin-bottom: 1rem; animation: pulse 1.5s infinite;">⏳</div>
+      <h2>Loading Journey Report...</h2>
+      <p style="color: var(--text-muted); margin-top: 0.5rem;">Retrieving completion verification and travel logs.</p>
+    </div>
+
+    <!-- Error State -->
+    <div id="completion-error" class="card" style="display: none; text-align: center; padding: 3rem 1.5rem; border-left: 4px solid var(--danger-600);">
+      <div style="font-size: 2.5rem; color: var(--danger-600); margin-bottom: 1rem;">⚠️</div>
+      <h2 id="error-title">Unable to Load Journey</h2>
+      <p id="error-message" style="color: var(--text-secondary); margin: 0.75rem auto 1.5rem; max-width: 480px;">
+        We could not retrieve details for this journey. It may have been removed or access is restricted.
+      </p>
+      <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+        <a href="dashboard.html" class="btn btn-primary">Back to Dashboard</a>
+        <a href="trip-history.html" class="btn btn-secondary">Open Historical Trip</a>
+        <a href="trip-setup.html" class="btn btn-outline">Plan Another Trip</a>
+      </div>
+    </div>
+
+    <!-- Empty State (No trip ID) -->
+    <div id="completion-empty" class="card" style="display: none; text-align: center; padding: 3rem 1.5rem;">
+      <div style="font-size: 2.5rem; margin-bottom: 1rem;">🗺️</div>
+      <h2>No Journey Selected</h2>
+      <p style="color: var(--text-secondary); margin: 0.75rem auto 1.5rem; max-width: 460px;">
+        No trip ID was provided in the URL. You can inspect an existing trip from your journey history or plan a new safe route.
+      </p>
+      <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+        <a href="trip-history.html" class="btn btn-primary">Open Historical Trip</a>
+        <a href="dashboard.html" class="btn btn-secondary">Back to Dashboard</a>
+        <a href="trip-setup.html" class="btn btn-navy">Plan Another Trip</a>
+      </div>
+    </div>
+
+    <!-- Completion Content -->
+    <div id="completion-content" style="display: none;">
+      <!-- Hero Card -->
+      <div class="card" style="text-align: center; padding: 2.5rem 1.75rem; margin-bottom: 1.5rem;">
+        <div style="width: 76px; height: 76px; background-color: var(--success-100); color: var(--success-600); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; margin: 0 auto 1.25rem; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);">
+          ✓
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+          <span class="badge badge-success" id="completion-status-badge">JOURNEY COMPLETED</span>
+        </div>
+
+        <h1 style="font-size: 2.1rem; color: var(--navy-900); margin-bottom: 0.4rem;" id="trip-title-display">
+          Journey Completed
+        </h1>
+        <p style="color: var(--text-secondary); font-size: 1.05rem;" id="trip-dest-subtitle">
+          Arrived at Destination
+        </p>
+
+        <!-- Honest Physical Arrival Notice -->
+        <div style="margin-top: 1.5rem; padding: 1rem 1.25rem; background-color: var(--surface-alt); border-radius: var(--radius-md); border-left: 4px solid var(--teal-600); text-align: left; font-size: 0.875rem;">
+          <div style="font-weight: 700; color: var(--navy-900); margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.4rem;">
+            <span>ℹ️</span> Safe Arrival Confirmation
+          </div>
+          <p style="color: var(--text-secondary); margin: 0; line-height: 1.45;">
+            Physical arrival at this destination was manually confirmed by user action at the conclusion of travel. WaySafe records user-confirmed completion timestamps and does not claim automated sensor verification without dedicated hardware sensors.
+          </p>
+        </div>
+      </div>
+
+      <!-- Key Trip Completion Metrics -->
+      <div class="card" style="margin-bottom: 1.5rem;">
+        <div class="card-header">
+          <h3 class="card-title"><span>📊</span> Journey Completion Details</h3>
+        </div>
+        <div class="card-body">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.25rem;">
+            <!-- Destination -->
+            <div style="background: var(--surface-alt); padding: 1rem; border-radius: var(--radius-sm);">
+              <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-bottom: 0.25rem;">Destination</div>
+              <div style="font-size: 1.05rem; font-weight: 700; color: var(--navy-900);" id="metric-destination">--</div>
+            </div>
+
+            <!-- Departure Time -->
+            <div style="background: var(--surface-alt); padding: 1rem; border-radius: var(--radius-sm);">
+              <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-bottom: 0.25rem;">Departure Time</div>
+              <div style="font-size: 1.05rem; font-weight: 700; color: var(--navy-900);" id="metric-departure">--</div>
+            </div>
+
+            <!-- Estimated Arrival -->
+            <div style="background: var(--surface-alt); padding: 1rem; border-radius: var(--radius-sm);">
+              <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-bottom: 0.25rem;">Estimated Arrival</div>
+              <div style="font-size: 1.05rem; font-weight: 700; color: var(--navy-900);" id="metric-estimated">--</div>
+            </div>
+
+            <!-- Actual Completion Timestamp -->
+            <div style="background: var(--surface-alt); padding: 1rem; border-radius: var(--radius-sm);">
+              <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-bottom: 0.25rem;">Actual Completion</div>
+              <div style="font-size: 1.05rem; font-weight: 700; color: var(--success-600);" id="metric-completed-at">--</div>
+            </div>
+
+            <!-- Number of Successful Check-ins -->
+            <div style="background: var(--surface-alt); padding: 1rem; border-radius: var(--radius-sm);">
+              <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-bottom: 0.25rem;">Successful Check-ins</div>
+              <div style="font-size: 1.05rem; font-weight: 700; color: var(--navy-900);" id="metric-checkins-count">0 check-ins</div>
+            </div>
+
+            <!-- Last Recorded Location -->
+            <div style="background: var(--surface-alt); padding: 1rem; border-radius: var(--radius-sm); grid-column: 1 / -1;">
+              <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-bottom: 0.25rem;">Last Recorded Location Update</div>
+              <div style="font-size: 0.95rem; color: var(--navy-900);" id="metric-last-location">
+                Checking location records...
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Navigation Buttons -->
+      <div class="card" style="margin-bottom: 1.5rem; text-align: center; padding: 1.5rem;">
+        <h4 style="margin-bottom: 1rem; color: var(--navy-900);">Navigation & Actions</h4>
+        <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+          <a href="dashboard.html" id="btn-back-dashboard" class="btn btn-secondary">
+            🏠 Back to Dashboard
+          </a>
+          <a href="trip-setup.html" id="btn-plan-another" class="btn btn-primary">
+            ➕ Plan Another Trip
+          </a>
+          <button type="button" id="btn-view-summary" class="btn btn-navy">
+            📋 View Trip Summary
+          </button>
+          <a href="trip-history.html" id="btn-open-historical" class="btn btn-outline">
+            📜 Open Historical Trip
+          </a>
+        </div>
+      </div>
+
+      <!-- Notify Contacts of Safe Arrival -->
+      <div class="card" style="margin-bottom: 1.5rem;">
+        <div class="card-header">
+          <h4 class="card-title"><span>💬</span> Notify Trusted Contacts of Safe Arrival</h4>
+        </div>
+        <div class="card-body">
+          <p style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 1rem;">
+            Send pre-composed safe arrival updates to your emergency contacts to reassure them that your trip ended safely.
+          </p>
+          <div id="arrival-notify-list" style="display: flex; flex-direction: column; gap: 0.5rem;">
+            <p style="color: var(--text-muted); font-size: 0.85rem;">Loading contacts...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: View Trip Summary -->
+    <div id="summary-modal" style="display: none; position: fixed; inset: 0; background: rgba(10, 25, 47, 0.65); z-index: 1000; align-items: center; justify-content: center; padding: 1rem;">
+      <div class="card" style="max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto; margin: 0; box-shadow: var(--shadow-lg);">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+          <h3 class="card-title" style="margin: 0;"><span>📋</span> Complete Trip Summary</h3>
+          <button type="button" id="btn-close-summary-modal" class="btn btn-sm btn-secondary" aria-label="Close modal">✕</button>
+        </div>
+        <div class="card-body" id="modal-summary-content">
+          <p style="color: var(--text-muted);">Loading details...</p>
+        </div>
+        <div style="padding: 1rem 1.5rem; background: var(--surface-alt); display: flex; justify-content: flex-end; gap: 0.5rem; border-top: 1px solid var(--border-subtle);">
+          <a href="trip-history.html" class="btn btn-secondary">Open in History</a>
+          <a href="trip-setup.html" class="btn btn-primary">Plan Another Trip</a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div style="font-weight: 700; color: var(--navy-900);">WaySafe</div>
+      <div class="footer-disclaimer">Personal journey safely completed and archived.</div>
+    </div>
+  </footer>
+
+  <script type="module" src="js/app.js"></script>
+
+  <script type="module">
+    import { tripsService } from './js/trips.js';
+    import { contactsService } from './js/contacts.js';
+    import { requireAuth } from './js/auth.js';
+    import { formatDate, escapeHtml, showToast } from './js/app.js';
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const tripId = urlParams.get('id');
+
+    let currentTrip = null;
+    let currentCheckins = [];
+
+    async function init() {
+      const isAuth = await requireAuth();
+      if (!isAuth) return;
+
+      if (!tripId) {
+        document.getElementById('completion-loading').style.display = 'none';
+        document.getElementById('completion-empty').style.display = 'block';
+        return;
+      }
+
+      try {
+        currentTrip = await tripsService.getById(tripId);
+        if (!currentTrip) {
+          throw new Error('Trip not found or does not belong to your account.');
+        }
+
+        // Fetch check-ins
+        try {
+          currentCheckins = await tripsService.getCheckins(tripId);
+        } catch (e) {
+          console.warn('Failed to load check-ins:', e);
+          currentCheckins = [];
+        }
+
+        renderTripDetails(currentTrip, currentCheckins);
+        loadArrivalContacts(currentTrip);
+
+        document.getElementById('completion-loading').style.display = 'none';
+        document.getElementById('completion-content').style.display = 'block';
+      } catch (err) {
+        document.getElementById('completion-loading').style.display = 'none';
+        const errEl = document.getElementById('completion-error');
+        document.getElementById('error-message').textContent = err.message || 'Unable to retrieve journey details.';
+        errEl.style.display = 'block';
+      }
+    }
+
+    function renderTripDetails(trip, checkins) {
+      const destName = typeof trip.destination === 'object' ? (trip.destination.name || 'Destination') : (trip.destination || 'Destination');
+      const startName = typeof trip.startLocation === 'object' ? (trip.startLocation.name || 'Current Location') : (trip.startLocation || 'Departure Point');
+      
+      document.getElementById('trip-title-display').textContent = trip.title || `Journey to ${destName}`;
+      document.getElementById('trip-dest-subtitle').textContent = `Destination: ${destName}`;
+
+      // Status badge
+      const badge = document.getElementById('completion-status-badge');
+      if (trip.status === 'completed') {
+        badge.textContent = 'JOURNEY COMPLETED';
+        badge.className = 'badge badge-success';
+      } else if (trip.status === 'active') {
+        badge.textContent = 'IN PROGRESS';
+        badge.className = 'badge badge-teal';
+      } else {
+        badge.textContent = (trip.status || 'PLANNED').toUpperCase();
+        badge.className = 'badge badge-navy';
+      }
+
+      // 1. Destination
+      document.getElementById('metric-destination').textContent = destName;
+
+      // 2. Departure Time
+      const depTime = trip.departureTime || trip.startedAt || trip.createdAt;
+      document.getElementById('metric-departure').textContent = depTime ? formatDate(depTime) : 'Not specified';
+
+      // 3. Estimated Arrival
+      document.getElementById('metric-estimated').textContent = trip.estimatedArrival ? formatDate(trip.estimatedArrival) : 'Not specified';
+
+      // 4. Actual Completion Timestamp
+      const completedTime = trip.completedAt || (trip.status === 'completed' ? (trip.updatedAt || trip.createdAt) : null);
+      document.getElementById('metric-completed-at').textContent = completedTime ? formatDate(completedTime) : (trip.status === 'completed' ? 'Recorded' : 'In Progress');
+
+      // 5. Successful Check-ins
+      const checkinCount = trip.checkinCount ?? trip.checkin_count ?? checkins.length;
+      document.getElementById('metric-checkins-count').textContent = `${checkinCount} check-in${checkinCount === 1 ? '' : 's'} recorded`;
+
+      // 6. Last Recorded Location Update
+      renderLastLocation(checkins, trip);
+
+      // Setup Summary Modal content
+      setupSummaryModal(trip, checkins, destName, startName, depTime, completedTime, checkinCount);
+    }
+
+    function renderLastLocation(checkins, trip) {
+      const container = document.getElementById('metric-last-location');
+      
+      // Look for latest checkin with valid coordinates
+      let lastLocCheckin = null;
+      if (Array.isArray(checkins) && checkins.length > 0) {
+        lastLocCheckin = checkins.find(c => {
+          if (c.latitude !== null && c.latitude !== undefined && c.longitude !== null && c.longitude !== undefined) {
+            return true;
+          }
+          if (c.location && typeof c.location.latitude === 'number') {
+            return true;
+          }
+          return false;
+        });
+      }
+
+      if (lastLocCheckin) {
+        const lat = lastLocCheckin.latitude ?? lastLocCheckin.location?.latitude;
+        const lng = lastLocCheckin.longitude ?? lastLocCheckin.location?.longitude;
+        const acc = lastLocCheckin.accuracy ?? lastLocCheckin.location?.accuracy;
+        const time = lastLocCheckin.checkedInAt || lastLocCheckin.createdAt || lastLocCheckin.created_at;
+
+        container.innerHTML = `
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+            <div>
+              <strong style="color: var(--teal-700);">📍 ${lat.toFixed(5)}°, ${lng.toFixed(5)}°</strong>
+              ${acc ? `<span style="font-size: 0.8rem; color: var(--text-muted); margin-left: 0.5rem;">(±${Math.round(acc)}m accuracy)</span>` : ''}
+              <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.15rem;">
+                Recorded at ${formatDate(time)} • Type: <em>${escapeHtml(lastLocCheckin.type || 'check-in')}</em>
+              </div>
+            </div>
+            <a href="https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=16/${lat}/${lng}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-secondary">
+              View on Map ↗
+            </a>
+          </div>
+        `;
+      } else {
+        container.innerHTML = `
+          <div style="color: var(--text-muted); font-size: 0.9rem; font-style: italic;">
+            No location updates recorded for this journey. Location sharing was either not granted or disabled during check-ins.
+          </div>
+        `;
+      }
+    }
+
+    function setupSummaryModal(trip, checkins, destName, startName, depTime, completedTime, checkinCount) {
+      const modalBody = document.getElementById('modal-summary-content');
+      const modeIcon = tripsService.formatTransportIcon(trip.transportMode);
+
+      modalBody.innerHTML = `
+        <div style="display: flex; flex-direction: column; gap: 1rem; font-size: 0.925rem;">
+          <div style="display: flex; align-items: center; gap: 0.75rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border-subtle);">
+            <div style="font-size: 2rem;">${modeIcon}</div>
+            <div>
+              <div style="font-weight: 700; font-size: 1.15rem; color: var(--navy-900);">${escapeHtml(trip.title || 'Trip Summary')}</div>
+              <div style="font-size: 0.85rem; color: var(--text-muted);">Mode: ${escapeHtml(trip.transportMode || 'Transit')} • Status: ${escapeHtml(trip.status || 'completed')}</div>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+            <div>
+              <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Origin</span>
+              <div style="font-weight: 600;">${escapeHtml(startName)}</div>
+            </div>
+            <div>
+              <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Destination</span>
+              <div style="font-weight: 600;">${escapeHtml(destName)}</div>
+            </div>
+            <div>
+              <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Departure Time</span>
+              <div style="font-weight: 600;">${depTime ? formatDate(depTime) : 'N/A'}</div>
+            </div>
+            <div>
+              <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Estimated Arrival</span>
+              <div style="font-weight: 600;">${trip.estimatedArrival ? formatDate(trip.estimatedArrival) : 'N/A'}</div>
+            </div>
+            <div>
+              <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Actual Completion</span>
+              <div style="font-weight: 600; color: var(--success-600);">${completedTime ? formatDate(completedTime) : 'N/A'}</div>
+            </div>
+            <div>
+              <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Total Check-ins</span>
+              <div style="font-weight: 600;">${checkinCount}</div>
+            </div>
+          </div>
+
+          ${trip.emergencyNotes ? `
+            <div style="background: var(--surface-alt); padding: 0.75rem; border-radius: var(--radius-sm);">
+              <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Safety Notes</span>
+              <p style="margin: 0.25rem 0 0; color: var(--navy-900);">${escapeHtml(trip.emergencyNotes)}</p>
+            </div>
+          ` : ''}
+
+          <div>
+            <span style="font-size: 0.8rem; font-weight: 700; color: var(--navy-900); text-transform: uppercase;">Check-in Timeline</span>
+            <div style="margin-top: 0.5rem; max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.5rem;">
+              ${checkins.length === 0 ? `
+                <div style="color: var(--text-muted); font-size: 0.85rem;">No individual check-ins recorded.</div>
+              ` : checkins.map((c, i) => `
+                <div style="background: var(--surface-alt); padding: 0.5rem 0.75rem; border-radius: var(--radius-sm); font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center;">
+                  <div>
+                    <span style="font-weight: 600; color: var(--navy-900);">#${checkins.length - i} ${escapeHtml(c.message || c.type || 'Check-in')}</span>
+                    ${c.batteryLevel !== null && c.batteryLevel !== undefined ? `<span style="color: var(--text-muted); font-size: 0.75rem;"> • 🔋 ${c.batteryLevel}%</span>` : ''}
+                  </div>
+                  <div style="color: var(--text-muted); font-size: 0.8rem;">
+                    ${formatDate(c.checkedInAt || c.createdAt)}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Modal open / close handlers
+      const modal = document.getElementById('summary-modal');
+      document.getElementById('btn-view-summary').addEventListener('click', () => {
+        modal.style.display = 'flex';
+      });
+      document.getElementById('btn-close-summary-modal').addEventListener('click', () => {
+        modal.style.display = 'none';
+      });
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.style.display = 'none';
+      });
+    }
+
+    async function loadArrivalContacts(trip) {
+      const container = document.getElementById('arrival-notify-list');
+      try {
+        const contacts = await contactsService.list();
+        if (!contacts || contacts.length === 0) {
+          container.innerHTML = `
+            <div style="padding: 0.75rem; background: var(--surface-alt); border-radius: var(--radius-sm); color: var(--text-muted); font-size: 0.875rem;">
+              No emergency contacts configured. You can add trusted persons in <a href="emergency-contacts.html" style="color: var(--teal-600); font-weight: 600;">Contacts</a>.
+            </div>
+          `;
+          return;
+        }
+
+        const destName = typeof trip.destination === 'object' ? (trip.destination.name || 'destination') : (trip.destination || 'destination');
+
+        container.innerHTML = contacts.map(c => {
+          const msg = `Hi ${c.name}, I have arrived safely at ${destName}. My WaySafe journey is now completed.`;
+          const smsLink = contactsService.createSmsLink(c.phone, msg);
+
+          return `
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: var(--surface-alt); border-radius: var(--radius-sm); flex-wrap: wrap; gap: 0.5rem;">
+              <div>
+                <span style="font-size: 0.9rem; font-weight: 700; color: var(--navy-900);">${escapeHtml(c.name)}</span>
+                <span style="font-size: 0.8rem; color: var(--text-secondary); margin-left: 0.25rem;">(${escapeHtml(c.relationship || 'Contact')})</span>
+                <div style="font-size: 0.8rem; color: var(--text-muted);">${escapeHtml(c.phone)}</div>
+              </div>
+              <a href="${smsLink}" class="btn btn-sm btn-navy">
+                Send Safe Arrival SMS
+              </a>
+            </div>
+          `;
+        }).join('');
+      } catch (err) {
+        container.innerHTML = `<span style="color: var(--danger-600); font-size: 0.85rem;">${escapeHtml(err.message)}</span>`;
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

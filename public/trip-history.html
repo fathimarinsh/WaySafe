@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Journey History & Records — WaySafe</title>
+  <meta name="description" content="View past travels, check-in logs, and safety records.">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+
+  <!-- Shared Header -->
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="index.html" class="brand-link">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+        </div>
+        <div class="brand-name">Way<span>Safe</span></div>
+      </a>
+
+      <button class="mobile-nav-toggle" id="mobile-nav-toggle" aria-label="Toggle navigation">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+      </button>
+
+      <nav class="main-nav" id="main-nav">
+        <ul class="nav-links">
+          <li><a href="dashboard.html" class="nav-link">Dashboard</a></li>
+          <li><a href="trip-setup.html" class="nav-link">Plan Journey</a></li>
+          <li><a href="emergency-travel.html" class="nav-link">Emergency Travel</a></li>
+          <li><a href="accessibility-planner.html" class="nav-link">Accessibility</a></li>
+          <li><a href="low-battery.html" class="nav-link">Low-Battery Guide</a></li>
+          <li><a href="emergency-contacts.html" class="nav-link">Contacts</a></li>
+          <li><a href="trip-history.html" class="nav-link active">History</a></li>
+        </ul>
+
+        <div class="nav-auth" id="nav-auth-container"></div>
+      </nav>
+    </div>
+  </header>
+
+  <main class="main-content" style="max-width: 900px; padding: 2rem 1rem;">
+    <!-- Page Header -->
+    <div class="page-header" style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+      <div class="page-header-text">
+        <h1 style="font-size: 2rem; color: var(--navy-900); margin-bottom: 0.25rem;">Journey History</h1>
+        <p style="color: var(--text-secondary); font-size: 0.95rem;">
+          Review past travels, check-in logs, and safety records.
+        </p>
+      </div>
+      <div class="page-header-actions" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        <a href="dashboard.html" id="btn-back-dashboard-header" class="btn btn-secondary">
+          🏠 Back to Dashboard
+        </a>
+        <a href="trip-setup.html" id="btn-plan-another-header" class="btn btn-primary">
+          ➕ Plan Another Trip
+        </a>
+      </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="card" style="margin-bottom: 1.5rem; padding: 1rem 1.25rem;">
+      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+          <span style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-right: 0.25rem;">Filter:</span>
+          <button class="btn btn-sm btn-navy filter-btn active" data-filter="all" id="filter-all">All</button>
+          <button class="btn btn-sm btn-secondary filter-btn" data-filter="planned" id="filter-planned">Planned</button>
+          <button class="btn btn-sm btn-secondary filter-btn" data-filter="active" id="filter-active">Active</button>
+          <button class="btn btn-sm btn-secondary filter-btn" data-filter="completed" id="filter-completed">Completed</button>
+          <button class="btn btn-sm btn-secondary filter-btn" data-filter="cancelled" id="filter-cancelled">Cancelled</button>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <span class="badge badge-teal" id="trips-count-badge">0 TRIPS</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Trips Content Card -->
+    <div class="card" style="padding: 0; overflow: hidden;">
+      <div class="card-header" style="padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
+        <h3 class="card-title" style="margin: 0;"><span>📜</span> User Travel Records</h3>
+        <span style="font-size: 0.8rem; color: var(--text-muted);">Private & Authenticated</span>
+      </div>
+
+      <!-- Container for dynamic states & items -->
+      <div id="trips-history-container">
+        <!-- Loading State -->
+        <div id="history-loading" style="padding: 3.5rem 1.5rem; text-align: center; color: var(--text-muted);">
+          <div style="font-size: 2.25rem; margin-bottom: 0.75rem; animation: pulse 1.5s infinite;">⏳</div>
+          <h3 style="color: var(--navy-900);">Loading Journey History...</h3>
+          <p style="margin-top: 0.25rem; font-size: 0.9rem;">Fetching your authenticated trips and check-in records.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Trip Summary Modal -->
+    <div id="history-summary-modal" style="display: none; position: fixed; inset: 0; background: rgba(10, 25, 47, 0.65); z-index: 1000; align-items: center; justify-content: center; padding: 1rem;">
+      <div class="card" style="max-width: 580px; width: 100%; max-height: 90vh; overflow-y: auto; margin: 0; box-shadow: var(--shadow-lg);">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; padding: 1.25rem 1.5rem;">
+          <h3 class="card-title" style="margin: 0;" id="modal-trip-title"><span>📋</span> Trip Summary</h3>
+          <button type="button" id="btn-close-modal" class="btn btn-sm btn-secondary" aria-label="Close modal">✕</button>
+        </div>
+        <div class="card-body" id="modal-trip-body" style="padding: 1.5rem;">
+          <p style="color: var(--text-muted);">Loading trip summary...</p>
+        </div>
+        <div style="padding: 1rem 1.5rem; background: var(--surface-alt); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; border-top: 1px solid var(--border-subtle);">
+          <div id="modal-action-left"></div>
+          <div style="display: flex; gap: 0.5rem;">
+            <a href="trip-setup.html" class="btn btn-secondary">Plan Another Trip</a>
+            <button type="button" id="btn-modal-dismiss" class="btn btn-navy">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div style="font-weight: 700; color: var(--navy-900);">WaySafe — Travel Archive</div>
+      <div class="footer-disclaimer">User travel records are private and isolated.</div>
+      <ul class="footer-links">
+        <li><a href="dashboard.html">Dashboard</a></li>
+        <li><a href="emergency-travel.html">Emergency Travel</a></li>
+        <li><a href="accessibility-planner.html">Accessibility</a></li>
+        <li><a href="trip-setup.html">Plan Journey</a></li>
+        <li><a href="emergency-contacts.html">Contacts</a></li>
+      </ul>
+    </div>
+  </footer>
+
+  <script type="module" src="js/app.js"></script>
+
+  <script type="module">
+    import { tripsService } from './js/trips.js';
+    import { requireAuth } from './js/auth.js';
+    import { formatDate, escapeHtml, showToast } from './js/app.js';
+
+    let allTrips = [];
+    let currentFilter = 'all';
+
+    async function loadTrips() {
+      const container = document.getElementById('trips-history-container');
+      const badge = document.getElementById('trips-count-badge');
+
+      try {
+        container.innerHTML = `
+          <div style="padding: 3.5rem 1.5rem; text-align: center; color: var(--text-muted);">
+            <div style="font-size: 2.25rem; margin-bottom: 0.75rem; animation: pulse 1.5s infinite;">⏳</div>
+            <h3 style="color: var(--navy-900);">Loading Journey History...</h3>
+            <p style="margin-top: 0.25rem; font-size: 0.9rem;">Fetching your authenticated trips and check-in records.</p>
+          </div>
+        `;
+
+        // Fetch from backend using status filter if specific, or all
+        const filterParam = currentFilter === 'all' ? {} : { status: currentFilter };
+        allTrips = await tripsService.list(filterParam);
+        renderTrips();
+      } catch (err) {
+        container.innerHTML = `
+          <div style="padding: 3rem 1.5rem; text-align: center;">
+            <div style="font-size: 2.5rem; color: var(--danger-600); margin-bottom: 0.75rem;">⚠️</div>
+            <h3 style="color: var(--navy-900);">Unable to Load Trips</h3>
+            <p style="color: var(--text-secondary); max-width: 440px; margin: 0.5rem auto 1.5rem;">
+              ${escapeHtml(err.message || 'An error occurred while fetching your journeys.')}
+            </p>
+            <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+              <button id="btn-retry-load" class="btn btn-primary">Try Again</button>
+              <a href="dashboard.html" class="btn btn-secondary">Back to Dashboard</a>
+            </div>
+          </div>
+        `;
+        document.getElementById('btn-retry-load')?.addEventListener('click', loadTrips);
+      }
+    }
+
+    function renderTrips() {
+      const container = document.getElementById('trips-history-container');
+      const badge = document.getElementById('trips-count-badge');
+
+      // Filter locally if list returned all or if user switched
+      const filtered = allTrips.filter(t => {
+        if (currentFilter === 'all') return true;
+        return t.status === currentFilter;
+      });
+
+      badge.textContent = `${filtered.length} TRIP${filtered.length === 1 ? '' : 'S'}`;
+
+      // Empty states
+      if (filtered.length === 0) {
+        if (allTrips.length === 0) {
+          // Completely empty state (no trips exist at all)
+          container.innerHTML = `
+            <div style="text-align: center; padding: 4rem 1.5rem; color: var(--text-muted);">
+              <div style="font-size: 3rem; margin-bottom: 1rem;">🗺️</div>
+              <h3 style="font-size: 1.4rem; color: var(--navy-900); margin-bottom: 0.5rem;">No Journeys Found</h3>
+              <p style="color: var(--text-secondary); max-width: 440px; margin: 0 auto 1.75rem; font-size: 0.95rem;">
+                You haven't planned or recorded any trips yet. Plan your first journey with emergency contacts and check-in safety.
+              </p>
+              <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+                <a href="trip-setup.html" class="btn btn-primary">➕ Plan Another Trip</a>
+                <a href="dashboard.html" class="btn btn-secondary">🏠 Back to Dashboard</a>
+              </div>
+            </div>
+          `;
+        } else {
+          // Filtered empty state (no trips match filter)
+          container.innerHTML = `
+            <div style="text-align: center; padding: 3.5rem 1.5rem; color: var(--text-muted);">
+              <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">🔍</div>
+              <h3 style="color: var(--navy-900); margin-bottom: 0.25rem;">No ${escapeHtml(capitalize(currentFilter))} Journeys</h3>
+              <p style="color: var(--text-secondary); margin: 0 auto 1.5rem; font-size: 0.9rem;">
+                There are no trips matching the "${escapeHtml(currentFilter)}" filter.
+              </p>
+              <div style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap;">
+                <button class="btn btn-secondary btn-sm" id="btn-show-all-filter">View All Journeys</button>
+                <a href="trip-setup.html" class="btn btn-primary btn-sm">➕ Plan Another Trip</a>
+              </div>
+            </div>
+          `;
+          document.getElementById('btn-show-all-filter')?.addEventListener('click', () => {
+            selectFilter('all');
+          });
+        }
+        return;
+      }
+
+      // Render trips list
+      container.innerHTML = filtered.map(t => {
+        const destName = typeof t.destination === 'object' ? (t.destination.name || 'Destination') : (t.destination || 'Destination');
+        const modeIcon = tripsService.formatTransportIcon(t.transportMode);
+        const badgeClass = tripsService.getBadgeClass(t.status);
+        const checkinCount = t.checkinCount ?? t.checkin_count ?? 0;
+        const tripDate = t.departureTime || t.startedAt || t.createdAt;
+
+        // Destination summary link target
+        let openHistoricalHref = `trip-status.html?id=${t.id}`;
+        let openHistoricalLabel = 'Open Historical Trip';
+        if (t.status === 'completed') {
+          openHistoricalHref = `trip-completed.html?id=${t.id}`;
+          openHistoricalLabel = 'Completed Summary';
+        }
+
+        return `
+          <div class="contact-item" style="padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+            <div style="display: flex; align-items: center; gap: 1rem; flex: 1; min-width: 260px;">
+              <div style="font-size: 1.75rem; width: 48px; height: 48px; background: var(--surface-alt); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                ${modeIcon}
+              </div>
+              <div>
+                <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                  <span style="font-weight: 700; font-size: 1.05rem; color: var(--navy-900);">${escapeHtml(t.title || t.tripName)}</span>
+                  <span class="badge ${badgeClass}">${(t.status || 'PLANNED').toUpperCase()}</span>
+                  <span style="font-size: 0.75rem; padding: 0.2rem 0.5rem; background: var(--navy-50); color: var(--navy-700); border-radius: var(--radius-sm); font-weight: 600;">
+                    ${checkinCount} check-in${checkinCount === 1 ? '' : 's'}
+                  </span>
+                </div>
+                <div style="font-size: 0.875rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                  Destination: <strong style="color: var(--navy-900);">${escapeHtml(destName)}</strong>
+                  • Date: <span>${tripDate ? formatDate(tripDate) : 'Unscheduled'}</span>
+                </div>
+              </div>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+              <button type="button" class="btn btn-sm btn-navy btn-view-summary" data-id="${t.id}">
+                📋 View Summary
+              </button>
+              <a href="${openHistoricalHref}" class="btn btn-sm btn-secondary">
+                ${openHistoricalLabel}
+              </a>
+              <button type="button" class="btn btn-sm btn-outline-danger btn-delete-trip" data-id="${t.id}" title="Delete Record">
+                Delete
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // Wire View Summary buttons
+      document.querySelectorAll('.btn-view-summary').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = btn.getAttribute('data-id');
+          const trip = allTrips.find(t => t.id === id);
+          if (trip) openSummaryModal(trip);
+        });
+      });
+
+      // Wire Delete buttons
+      document.querySelectorAll('.btn-delete-trip').forEach(btn => {
+        btn.addEventListener('click', () => deleteTrip(btn.getAttribute('data-id')));
+      });
+    }
+
+    function capitalize(str) {
+      if (!str) return '';
+      return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+
+    function selectFilter(filter) {
+      currentFilter = filter;
+      document.querySelectorAll('.filter-btn').forEach(b => {
+        b.classList.remove('btn-navy', 'active');
+        b.classList.add('btn-secondary');
+      });
+      const activeBtn = document.querySelector(`.filter-btn[data-filter="${filter}"]`);
+      if (activeBtn) {
+        activeBtn.classList.remove('btn-secondary');
+        activeBtn.classList.add('btn-navy', 'active');
+      }
+      loadTrips();
+    }
+
+    // Filter Buttons
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const filter = btn.getAttribute('data-filter');
+        selectFilter(filter);
+      });
+    });
+
+    async function deleteTrip(id) {
+      if (!confirm('Are you sure you want to permanently delete this trip record?')) return;
+      try {
+        await tripsService.delete(id);
+        showToast('Trip record deleted successfully.', 'info');
+        allTrips = allTrips.filter(t => t.id !== id);
+        renderTrips();
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+
+    function openSummaryModal(trip) {
+      const modal = document.getElementById('history-summary-modal');
+      const titleEl = document.getElementById('modal-trip-title');
+      const bodyEl = document.getElementById('modal-trip-body');
+      const leftActionEl = document.getElementById('modal-action-left');
+
+      const destName = typeof trip.destination === 'object' ? (trip.destination.name || 'Destination') : (trip.destination || 'Destination');
+      const startName = typeof trip.startLocation === 'object' ? (trip.startLocation.name || 'Departure point') : (trip.startLocation || 'Departure point');
+      const checkinCount = trip.checkinCount ?? trip.checkin_count ?? 0;
+      const modeIcon = tripsService.formatTransportIcon(trip.transportMode);
+      const badgeClass = tripsService.getBadgeClass(trip.status);
+
+      titleEl.innerHTML = `<span>${modeIcon}</span> ${escapeHtml(trip.title || trip.tripName)}`;
+
+      bodyEl.innerHTML = `
+        <div style="display: flex; flex-direction: column; gap: 1rem; font-size: 0.925rem;">
+          <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.75rem;">
+            <div>
+              <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Status</div>
+              <span class="badge ${badgeClass}">${(trip.status || 'PLANNED').toUpperCase()}</span>
+            </div>
+            <div>
+              <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Check-in Count</div>
+              <div style="font-weight: 700; color: var(--navy-900);">${checkinCount} check-in${checkinCount === 1 ? '' : 's'}</div>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+            <div>
+              <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Origin</div>
+              <div style="font-weight: 600; color: var(--navy-900);">${escapeHtml(startName)}</div>
+            </div>
+            <div>
+              <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Destination</div>
+              <div style="font-weight: 600; color: var(--navy-900);">${escapeHtml(destName)}</div>
+            </div>
+            <div>
+              <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Departure Date</div>
+              <div style="font-weight: 600;">${trip.departureTime ? formatDate(trip.departureTime) : 'Not specified'}</div>
+            </div>
+            <div>
+              <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Estimated Arrival</div>
+              <div style="font-weight: 600;">${trip.estimatedArrival ? formatDate(trip.estimatedArrival) : 'Not specified'}</div>
+            </div>
+            ${trip.completedAt ? `
+              <div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Actual Completion</div>
+                <div style="font-weight: 600; color: var(--success-600);">${formatDate(trip.completedAt)}</div>
+              </div>
+            ` : ''}
+            <div>
+              <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Transport Mode</div>
+              <div style="font-weight: 600;">${escapeHtml(trip.transportMode || 'Transit')}</div>
+            </div>
+          </div>
+
+          ${trip.emergencyNotes ? `
+            <div style="background: var(--surface-alt); padding: 0.75rem; border-radius: var(--radius-sm);">
+              <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Emergency Notes</div>
+              <div style="margin-top: 0.25rem; color: var(--navy-900);">${escapeHtml(trip.emergencyNotes)}</div>
+            </div>
+          ` : ''}
+        </div>
+      `;
+
+      // Configure historical trip button
+      let targetHref = `trip-status.html?id=${trip.id}`;
+      let targetLabel = 'Open Historical Trip';
+      if (trip.status === 'completed') {
+        targetHref = `trip-completed.html?id=${trip.id}`;
+        targetLabel = 'View Completion Report';
+      }
+
+      leftActionEl.innerHTML = `
+        <a href="${targetHref}" class="btn btn-navy">
+          ${targetLabel} ↗
+        </a>
+      `;
+
+      modal.style.display = 'flex';
+    }
+
+    // Modal close listeners
+    const modal = document.getElementById('history-summary-modal');
+    document.getElementById('btn-close-modal').addEventListener('click', () => {
+      modal.style.display = 'none';
+    });
+    document.getElementById('btn-modal-dismiss').addEventListener('click', () => {
+      modal.style.display = 'none';
+    });
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) modal.style.display = 'none';
+    });
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      const isAuth = await requireAuth();
+      if (!isAuth) return;
+      loadTrips();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Accessibility Planner Mode — WaySafe</title>
+  <meta name="description" content="Plan a journey around accessibility preferences and available route information, including step-free access and wheelchair-friendly navigation.">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  <style>
+    .planner-banner {
+      background: linear-gradient(135deg, rgba(13, 148, 136, 0.1) 0%, rgba(30, 58, 138, 0.08) 100%);
+      border: 1px solid rgba(13, 148, 136, 0.25);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .pref-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 0.75rem;
+      margin-top: 0.75rem;
+    }
+    .pref-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.65rem;
+      padding: 0.75rem 1rem;
+      background: var(--surface-alt);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .pref-item:hover {
+      background: var(--surface-card);
+      border-color: var(--teal-500);
+    }
+    .pref-item input {
+      margin-top: 0.2rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Shared Header -->
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="index.html" class="brand-link" id="brand-link">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+        </div>
+        <div class="brand-name">Way<span>Safe</span></div>
+      </a>
+
+      <button class="mobile-nav-toggle" id="mobile-nav-toggle" aria-label="Toggle navigation">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+      </button>
+
+      <nav class="main-nav" id="main-nav">
+        <ul class="nav-links">
+          <li><a href="dashboard.html" class="nav-link">Dashboard</a></li>
+          <li><a href="trip-setup.html" class="nav-link">Plan Journey</a></li>
+          <li><a href="emergency-travel.html" class="nav-link">Emergency Travel</a></li>
+          <li><a href="accessibility-planner.html" class="nav-link active">Accessibility</a></li>
+          <li><a href="low-battery.html" class="nav-link">Low-Battery Guide</a></li>
+          <li><a href="emergency-contacts.html" class="nav-link">Contacts</a></li>
+          <li><a href="trip-history.html" class="nav-link">History</a></li>
+        </ul>
+
+        <div class="nav-auth" id="nav-auth-container"></div>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <div style="margin-bottom: 1.25rem;">
+      <a href="dashboard.html" style="font-size: 0.9rem; color: var(--text-secondary); text-decoration: none;">
+        ← Back to Dashboard
+      </a>
+    </div>
+
+    <!-- Header Banner -->
+    <div class="planner-banner">
+      <div>
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+          <span style="font-size: 1.5rem;">♿</span>
+          <h1 style="font-size: 1.75rem; margin: 0; color: var(--navy-900);">Accessibility Planner Mode</h1>
+        </div>
+        <p style="margin: 0; color: var(--text-secondary); font-size: 0.95rem; max-width: 680px;">
+          Configure step-free, wheelchair-friendly, and mobility-assisted travel parameters. Review live provider status and save verified safety journeys.
+        </p>
+      </div>
+      <div>
+        <span class="badge badge-teal" id="planner-mode-badge">ACCESSIBILITY PLANNER</span>
+      </div>
+    </div>
+
+    <div class="card-grid-2" style="margin-bottom: 2rem;">
+      <!-- Column 1: Journey Setup & Accessibility Criteria Form -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title" style="font-size: 1.15rem;">
+            <span>🗺️</span> Route & Mobility Criteria
+          </h2>
+        </div>
+
+        <div class="card-body">
+          <form id="accessibility-planner-form">
+            <div class="form-group">
+              <label for="ap-start-location" class="form-label">Starting Point</label>
+              <div style="display: flex; gap: 0.5rem;">
+                <input type="text" id="ap-start-location" class="form-input" placeholder="Current Location, Station, or Address">
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-use-gps" style="white-space: nowrap;">
+                  📍 My GPS
+                </button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="ap-destination" class="form-label">Destination <span style="color: var(--danger-600);">*</span></label>
+              <input type="text" id="ap-destination" class="form-input" placeholder="e.g., Civic Center Medical Clinic, 742 Market St" required>
+            </div>
+
+            <div class="form-group">
+              <label for="ap-mode" class="form-label">Preferred Transit Mode</label>
+              <select id="ap-mode" class="form-input">
+                <option value="transit">Public Transit (Bus / Train / Metro)</option>
+                <option value="walking">Pedestrian / Wheelchair Pathway</option>
+                <option value="accessible_vehicle">Accessible Ride / Paratransit</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" style="margin-bottom: 0.25rem;">
+                Accessibility Preferences
+              </label>
+              <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0 0 0.5rem;">
+                Select all specific infrastructure and assistance requirements:
+              </p>
+
+              <div class="pref-grid">
+                <label class="pref-item">
+                  <input type="checkbox" id="pref-step-free" checked>
+                  <div>
+                    <strong style="display: block; font-size: 0.875rem; color: var(--navy-900);">Step-Free Access</strong>
+                    <span style="font-size: 0.775rem; color: var(--text-secondary);">No stairs; level pathways and curb cuts</span>
+                  </div>
+                </label>
+
+                <label class="pref-item">
+                  <input type="checkbox" id="pref-wheelchair" checked>
+                  <div>
+                    <strong style="display: block; font-size: 0.875rem; color: var(--navy-900);">Wheelchair Routing</strong>
+                    <span style="font-size: 0.775rem; color: var(--text-secondary);">Ramps, wide doors & wheelchair space</span>
+                  </div>
+                </label>
+
+                <label class="pref-item">
+                  <input type="checkbox" id="pref-elevators">
+                  <div>
+                    <strong style="display: block; font-size: 0.875rem; color: var(--navy-900);">Elevator Access Required</strong>
+                    <span style="font-size: 0.775rem; color: var(--text-secondary);">Working lift access at stations</span>
+                  </div>
+                </label>
+
+                <label class="pref-item">
+                  <input type="checkbox" id="pref-level-boarding">
+                  <div>
+                    <strong style="display: block; font-size: 0.875rem; color: var(--navy-900);">Level Boarding</strong>
+                    <span style="font-size: 0.775rem; color: var(--text-secondary);">Zero gap platform-to-vehicle boarding</span>
+                  </div>
+                </label>
+
+                <label class="pref-item">
+                  <input type="checkbox" id="pref-low-incline">
+                  <div>
+                    <strong style="display: block; font-size: 0.875rem; color: var(--navy-900);">Low-Incline Paths</strong>
+                    <span style="font-size: 0.775rem; color: var(--text-secondary);">Avoid steep hills, stairs, and escalators</span>
+                  </div>
+                </label>
+
+                <label class="pref-item">
+                  <input type="checkbox" id="pref-sensory-aids">
+                  <div>
+                    <strong style="display: block; font-size: 0.875rem; color: var(--navy-900);">Visual & Audio Aids</strong>
+                    <span style="font-size: 0.775rem; color: var(--text-secondary);">Tactile paving & spoken announcements</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="ap-trusted-contact" class="form-label">Link Emergency Contact (Optional)</label>
+              <select id="ap-trusted-contact" class="form-input">
+                <option value="">Select a contact to inform...</option>
+              </select>
+            </div>
+
+            <button type="submit" class="btn btn-primary" id="btn-search-accessible-routes" style="width: 100%; margin-top: 0.5rem;">
+              <span>🔍</span> Search Accessible Routes
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Column 2: Results & Provider Integration Status -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title" style="font-size: 1.15rem;">
+            <span>📊</span> Route Results & Provider Status
+          </h2>
+          <span class="badge badge-warning" id="provider-status-badge">NO ROUTING PROVIDER</span>
+        </div>
+
+        <div class="card-body" id="route-results-container">
+          <!-- Default State before search -->
+          <div id="results-idle" style="text-align: center; padding: 3rem 1.5rem; color: var(--text-muted);">
+            <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">♿</div>
+            <h3 style="color: var(--navy-900); font-size: 1.15rem; margin-bottom: 0.5rem;">Ready to Plan Your Route</h3>
+            <p style="font-size: 0.9rem; max-width: 380px; margin: 0 auto; color: var(--text-secondary);">
+              Specify your departure point, destination, and accessibility preferences on the left, then click <strong>Search Accessible Routes</strong>.
+            </p>
+          </div>
+
+          <!-- Searching State -->
+          <div id="results-searching" style="display: none; text-align: center; padding: 3rem 1.5rem; color: var(--text-muted);">
+            <div class="loading-spinner" style="border-color: var(--teal-600); border-top-color: transparent; width: 32px; height: 32px; margin-bottom: 1rem;"></div>
+            <h3 style="color: var(--navy-900); font-size: 1.15rem;">Checking Route Providers...</h3>
+            <p style="font-size: 0.9rem; color: var(--text-secondary);">Verifying configured accessibility datasets and elevation models.</p>
+          </div>
+
+          <!-- Unavailable-Data State (Realistic & Transparent) -->
+          <div id="results-unavailable" style="display: none;">
+            <div class="alert alert-info" style="margin-bottom: 1.5rem;">
+              <div style="display: flex; gap: 0.75rem; align-items: flex-start;">
+                <span style="font-size: 1.5rem;">ℹ️</span>
+                <div>
+                  <strong style="display: block; margin-bottom: 0.25rem;">Live Accessible Routing Provider Unavailable</strong>
+                  <p style="font-size: 0.85rem; margin: 0; color: inherit;">
+                    An external accessibility routing provider (such as Wheelmap API, OpenRouteService Accessibility Profile, or GTFS-Pathways) is not currently configured in the environment.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div style="background: var(--surface-alt); padding: 1.25rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 1.5rem;">
+              <h4 style="margin: 0 0 0.5rem; color: var(--navy-900); font-size: 1rem;">Requested Journey Parameters:</h4>
+              <ul style="margin: 0; padding-left: 1.25rem; font-size: 0.875rem; color: var(--text-secondary); line-height: 1.6;">
+                <li><strong>Destination:</strong> <span id="summary-dest">--</span></li>
+                <li><strong>Origin:</strong> <span id="summary-origin">--</span></li>
+                <li><strong>Transit Mode:</strong> <span id="summary-mode">--</span></li>
+                <li><strong>Selected Preferences:</strong> <span id="summary-prefs">--</span></li>
+              </ul>
+            </div>
+
+            <div style="background: var(--surface-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1.25rem; margin-bottom: 1.5rem;">
+              <h4 style="margin: 0 0 0.5rem; color: var(--navy-900); font-size: 0.95rem;">
+                🛡️ Safe Journey Alternative:
+              </h4>
+              <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0 0 1rem;">
+                Even without a third-party automated routing engine, you can record this journey in WaySafe. Your accessibility requirements will be documented and visible to your emergency contacts.
+              </p>
+              <button type="button" class="btn btn-primary" id="btn-save-accessible-trip" style="width: 100%;">
+                <span>💾</span> Save as Planned Accessible Journey in WaySafe
+              </button>
+            </div>
+
+            <div style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.4;">
+              <strong>Note on Safety:</strong> We do not fabricate elevator availability, step-free curb cuts, or accessible transfer stations. Please verify physical elevator outages with local transit agencies prior to departure.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section: Accessibility Travel Best Practices -->
+    <div class="card" style="margin-bottom: 2rem;">
+      <div class="card-header">
+        <h2 class="card-title" style="font-size: 1.15rem;">
+          <span>♿</span> Pre-Departure Accessibility Checklist
+        </h2>
+      </div>
+      <div class="card-body">
+        <div class="card-grid-3" style="gap: 1rem;">
+          <div style="background: var(--surface-alt); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+            <div style="font-size: 1.5rem; margin-bottom: 0.25rem;">🛗</div>
+            <strong style="color: var(--navy-900); font-size: 0.9rem; display: block; margin-bottom: 0.25rem;">Check Station Lifts</strong>
+            <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0;">
+              Check your transit authority's live elevator outage hotlines before leaving to prevent getting stranded on platforms.
+            </p>
+          </div>
+
+          <div style="background: var(--surface-alt); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+            <div style="font-size: 1.5rem; margin-bottom: 0.25rem;">🔋</div>
+            <strong style="color: var(--navy-900); font-size: 0.9rem; display: block; margin-bottom: 0.25rem;">Power Chair Range</strong>
+            <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0;">
+              Ensure your mobility device battery has adequate range (+30% buffer) to handle unexpected detours or hill climbs.
+            </p>
+          </div>
+
+          <div style="background: var(--surface-alt); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+            <div style="font-size: 1.5rem; margin-bottom: 0.25rem;">👥</div>
+            <strong style="color: var(--navy-900); font-size: 0.9rem; display: block; margin-bottom: 0.25rem;">Assign Check-in Contact</strong>
+            <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0;">
+              Link a trusted emergency contact who knows your specific assistance needs and destination timeframe.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Shared Footer -->
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div>
+        <div style="font-weight: 700; color: var(--navy-900);">WaySafe — Accessibility Planner</div>
+        <div class="footer-disclaimer">Inclusive travel preparation and mobility safety tracking.</div>
+      </div>
+      <ul class="footer-links">
+        <li><a href="dashboard.html">Dashboard</a></li>
+        <li><a href="trip-setup.html">Plan Journey</a></li>
+        <li><a href="emergency-travel.html">Emergency Travel</a></li>
+        <li><a href="emergency-contacts.html">Emergency Contacts</a></li>
+        <li><a href="trip-history.html">Trip History</a></li>
+      </ul>
+    </div>
+  </footer>
+
+  <script type="module" src="js/app.js"></script>
+
+  <script type="module">
+    import { requireAuth, getCurrentUser, logout } from './js/auth.js';
+    import { tripsService } from './js/trips.js';
+    import { contactsService } from './js/contacts.js';
+    import { locationService } from './js/location.js';
+    import { showToast, formatDate, escapeHtml } from './js/app.js';
+
+    let userContacts = [];
+    let lastSearchParams = null;
+
+    async function initPage() {
+      const isAuth = await requireAuth();
+      if (!isAuth) return;
+
+      // 1. Load contacts
+      loadContacts();
+
+      // 2. Setup handlers
+      setupEventHandlers();
+    }
+
+    async function loadContacts() {
+      try {
+        userContacts = await contactsService.list();
+        const select = document.getElementById('ap-trusted-contact');
+        if (select) {
+          select.innerHTML = '<option value="">Select a contact to inform (optional)...</option>';
+          userContacts.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.id;
+            opt.textContent = `${c.name} (${c.relationship || 'Contact'}) — ${c.phone}`;
+            select.appendChild(opt);
+          });
+        }
+      } catch (e) {
+        console.warn('Could not load contacts:', e);
+      }
+    }
+
+    function setupEventHandlers() {
+      // GPS button
+      document.getElementById('btn-use-gps')?.addEventListener('click', async () => {
+        const btn = document.getElementById('btn-use-gps');
+        btn.disabled = true;
+        btn.textContent = '⏳ Locating...';
+
+        try {
+          const pos = await locationService.getCurrentPosition();
+          document.getElementById('ap-start-location').value = `${pos.latitude.toFixed(5)}, ${pos.longitude.toFixed(5)} (GPS)`;
+          showToast('Acquired GPS departure point.', 'success');
+        } catch (e) {
+          showToast(e.message || 'Could not acquire GPS position.', 'warning');
+        } finally {
+          btn.disabled = false;
+          btn.textContent = '📍 My GPS';
+        }
+      });
+
+      // Submit search
+      document.getElementById('accessibility-planner-form')?.addEventListener('submit', (e) => {
+        e.preventDefault();
+
+        const origin = document.getElementById('ap-start-location').value.trim() || 'Current Location';
+        const dest = document.getElementById('ap-destination').value.trim();
+        const mode = document.getElementById('ap-mode').value;
+        const contactId = document.getElementById('ap-trusted-contact').value || null;
+
+        if (!dest) {
+          showToast('Please specify a destination.', 'warning');
+          return;
+        }
+
+        // Gather preferences
+        const selectedPrefs = [];
+        if (document.getElementById('pref-step-free').checked) selectedPrefs.push('Step-Free Access (No stairs)');
+        if (document.getElementById('pref-wheelchair').checked) selectedPrefs.push('Wheelchair Ramp / Accessible Pathway');
+        if (document.getElementById('pref-elevators').checked) selectedPrefs.push('Working Lift / Elevator Required');
+        if (document.getElementById('pref-level-boarding').checked) selectedPrefs.push('Level Vehicle Boarding');
+        if (document.getElementById('pref-low-incline').checked) selectedPrefs.push('Low Incline (<5% gradient)');
+        if (document.getElementById('pref-sensory-aids').checked) selectedPrefs.push('Audio / Visual Transit Aids');
+
+        lastSearchParams = {
+          origin,
+          dest,
+          mode,
+          contactId,
+          prefs: selectedPrefs
+        };
+
+        // Show searching state
+        document.getElementById('results-idle').style.display = 'none';
+        document.getElementById('results-unavailable').style.display = 'none';
+        document.getElementById('results-searching').style.display = 'block';
+
+        setTimeout(() => {
+          document.getElementById('results-searching').style.display = 'none';
+          document.getElementById('results-unavailable').style.display = 'block';
+
+          document.getElementById('summary-dest').textContent = dest;
+          document.getElementById('summary-origin').textContent = origin;
+          document.getElementById('summary-mode').textContent = mode.replace('_', ' ').toUpperCase();
+          document.getElementById('summary-prefs').textContent = selectedPrefs.length > 0 ? selectedPrefs.join('; ') : 'None specified';
+        }, 700);
+      });
+
+      // Save as Planned Accessible Trip
+      document.getElementById('btn-save-accessible-trip')?.addEventListener('click', async () => {
+        if (!lastSearchParams) return;
+
+        const btn = document.getElementById('btn-save-accessible-trip');
+        btn.disabled = true;
+        showToast('Saving planned accessible trip...', 'info');
+
+        try {
+          const now = new Date();
+          const departure = new Date(now.getTime() + 15 * 60 * 1000); // 15 mins from now
+          const eta = new Date(departure.getTime() + 45 * 60 * 1000); // 45 min duration
+
+          const notes = `[Accessibility Mode]\nPreferences: ${lastSearchParams.prefs.join(', ')}\nTransit Mode: ${lastSearchParams.mode}`;
+
+          const created = await tripsService.create({
+            title: `Accessible Trip to ${lastSearchParams.dest}`,
+            tripName: `Accessible Trip to ${lastSearchParams.dest}`,
+            destination: lastSearchParams.dest,
+            startLocation: lastSearchParams.origin,
+            departureTime: departure.toISOString(),
+            estimatedArrival: eta.toISOString(),
+            trustedContactId: lastSearchParams.contactId,
+            transportMode: lastSearchParams.mode,
+            emergencyNotes: notes,
+            locationSharingConsent: true
+          });
+
+          showToast('Accessible trip saved to your dashboard!', 'success');
+          setTimeout(() => {
+            window.location.href = `trip-status.html?id=${created.id}`;
+          }, 800);
+        } catch (err) {
+          showToast(`Error saving trip: ${err.message}`, 'danger');
+          btn.disabled = false;
+        }
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', initPage);
+  </script>
+</body>
+</html>

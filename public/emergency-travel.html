@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Emergency Travel Mode — WaySafe</title>
+  <meta name="description" content="Plan a safer journey, monitor available battery information, manage check-ins, and access trusted contacts during urgent or high-caution travel.">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  <style>
+    .emergency-banner {
+      background: linear-gradient(135deg, rgba(220, 38, 38, 0.08) 0%, rgba(13, 148, 136, 0.08) 100%);
+      border: 1px solid rgba(220, 38, 38, 0.25);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .emergency-pulse {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background-color: var(--danger-600);
+      margin-right: 0.5rem;
+      animation: pulse 1.5s infinite;
+    }
+    .contact-card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    .contact-action-card {
+      background: var(--surface-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .checkin-log-item {
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .checkin-log-item:last-child {
+      border-bottom: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Shared Header -->
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="index.html" class="brand-link" id="brand-link">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+        </div>
+        <div class="brand-name">Way<span>Safe</span></div>
+      </a>
+
+      <button class="mobile-nav-toggle" id="mobile-nav-toggle" aria-label="Toggle navigation">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+      </button>
+
+      <nav class="main-nav" id="main-nav">
+        <ul class="nav-links">
+          <li><a href="dashboard.html" class="nav-link">Dashboard</a></li>
+          <li><a href="trip-setup.html" class="nav-link">Plan Journey</a></li>
+          <li><a href="emergency-travel.html" class="nav-link active">Emergency Travel</a></li>
+          <li><a href="accessibility-planner.html" class="nav-link">Accessibility</a></li>
+          <li><a href="low-battery.html" class="nav-link">Low-Battery Guide</a></li>
+          <li><a href="emergency-contacts.html" class="nav-link">Contacts</a></li>
+          <li><a href="trip-history.html" class="nav-link">History</a></li>
+        </ul>
+
+        <div class="nav-auth" id="nav-auth-container"></div>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <div style="margin-bottom: 1.25rem;">
+      <a href="dashboard.html" style="font-size: 0.9rem; color: var(--text-secondary); text-decoration: none;">
+        ← Back to Dashboard
+      </a>
+    </div>
+
+    <!-- Page Header -->
+    <div class="emergency-banner">
+      <div>
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+          <span class="emergency-pulse"></span>
+          <h1 style="font-size: 1.75rem; margin: 0; color: var(--navy-900);">Emergency Travel Mode</h1>
+        </div>
+        <p style="margin: 0; color: var(--text-secondary); font-size: 0.95rem; max-width: 680px;">
+          High-caution journey management with real-time hardware battery telemetry, consensual check-ins, and direct trusted contact access.
+        </p>
+      </div>
+      <div id="emergency-status-badge">
+        <span class="badge badge-navy" id="badge-mode-state">MONITORING STANDBY</span>
+      </div>
+    </div>
+
+    <!-- Section 1: Active Trip or Quick Journey Setup -->
+    <div class="card" id="section-trip-control" style="margin-bottom: 2rem;">
+      <div class="card-header">
+        <h2 class="card-title" style="font-size: 1.15rem;">
+          <span>📍</span> Journey Command
+        </h2>
+        <span class="badge badge-teal" id="trip-control-badge">CHECKING...</span>
+      </div>
+
+      <!-- State A: Active Journey in Progress -->
+      <div class="card-body" id="view-active-trip" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
+          <div>
+            <div style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">Active Destination</div>
+            <h3 id="active-dest-text" style="font-size: 1.35rem; color: var(--navy-900); margin: 0.25rem 0;">--</h3>
+            <div id="active-origin-text" style="font-size: 0.9rem; color: var(--text-secondary);">From: --</div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">Started At</div>
+            <div id="active-started-text" style="font-size: 0.95rem; font-weight: 600; color: var(--navy-900);">--</div>
+            <div id="active-contact-text" style="font-size: 0.85rem; color: var(--teal-700); margin-top: 0.25rem;">Contact: --</div>
+          </div>
+        </div>
+
+        <!-- Quick Emergency Check-in Trigger -->
+        <div style="background: var(--surface-alt); padding: 1.25rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); margin-bottom: 1.5rem;">
+          <h4 style="margin: 0 0 0.5rem; font-size: 1rem; color: var(--navy-900);">Quick Check-in</h4>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0 0 1rem;">
+            Record your safety status. Your last check-in timestamp will update and sync with your trip history.
+          </p>
+
+          <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; margin-bottom: 1rem;">
+            <input type="text" id="checkin-note-input" class="form-input" placeholder="Optional status note (e.g., reached transfer point safely)" style="flex: 1; min-width: 260px;">
+            <label style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; cursor: pointer;">
+              <input type="checkbox" id="checkin-gps-consent" checked>
+              <span>Include GPS location (requires permission)</span>
+            </label>
+          </div>
+
+          <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+            <button type="button" class="btn btn-primary" id="btn-submit-emergency-checkin">
+              <span>✅</span> Record Check-in Now
+            </button>
+            <button type="button" class="btn btn-secondary" id="btn-show-emergency-qr" style="border-color: #0284c7; color: #0284c7; font-weight: 700;">
+              <span>📱</span> Emergency QR Code
+            </button>
+            <a id="btn-view-trip-details" href="trip-status.html" class="btn btn-secondary">
+              <span>🗺️</span> View Live Trip Map
+            </a>
+            <button type="button" class="btn btn-danger" id="btn-end-emergency-trip" style="margin-left: auto;">
+              <span>🏁</span> End Journey Safely
+            </button>
+          </div>
+        </div>
+
+        <!-- Check-in Log Table -->
+        <div>
+          <div style="font-weight: 700; font-size: 0.9rem; color: var(--navy-900); margin-bottom: 0.5rem;">
+            Recent Check-ins for This Journey
+          </div>
+          <div id="checkins-history-list" style="background: var(--surface-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); min-height: 60px;">
+            <div style="padding: 1rem; text-align: center; color: var(--text-muted); font-size: 0.85rem;">
+              No check-ins recorded yet.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- State B: No Active Trip - Quick Start Form or Select Planned -->
+      <div class="card-body" id="view-no-active-trip" style="display: none;">
+        <div class="alert alert-info" style="margin-bottom: 1.5rem;">
+          <strong>No active journey in progress.</strong> You can launch a quick emergency trip below, or activate an existing planned journey.
+        </div>
+
+        <div class="card-grid-2" style="gap: 1.5rem;">
+          <!-- Left: Launch New Emergency Trip -->
+          <div>
+            <h3 style="font-size: 1.1rem; color: var(--navy-900); margin-bottom: 1rem;">
+              🚀 Start New Emergency Trip
+            </h3>
+            <form id="emergency-quick-trip-form">
+              <div class="form-group">
+                <label for="eq-destination" class="form-label">Destination <span style="color: var(--danger-600);">*</span></label>
+                <input type="text" id="eq-destination" class="form-input" placeholder="e.g., Central Station, 452 Elm St" required>
+              </div>
+
+              <div class="form-group">
+                <label for="eq-origin" class="form-label">Starting Location (Optional)</label>
+                <input type="text" id="eq-origin" class="form-input" placeholder="Current location or departure point">
+              </div>
+
+              <div class="form-group">
+                <label for="eq-contact" class="form-label">Trusted Contact</label>
+                <select id="eq-contact" class="form-input">
+                  <option value="">Select a trusted contact...</option>
+                </select>
+                <small style="color: var(--text-muted); display: block; margin-top: 0.25rem;">
+                  Contacts must belong to your account.
+                </small>
+              </div>
+
+              <div class="form-group">
+                <label style="display: flex; align-items: flex-start; gap: 0.5rem; cursor: pointer; font-size: 0.9rem;">
+                  <input type="checkbox" id="eq-consent" checked style="margin-top: 0.2rem;">
+                  <span>Grant location sharing consent for check-ins on this journey</span>
+                </label>
+              </div>
+
+              <button type="submit" class="btn btn-primary" id="btn-start-emergency-now" style="width: 100%;">
+                <span>🛡️</span> Launch Emergency Travel Now
+              </button>
+            </form>
+          </div>
+
+          <!-- Right: Activate Existing Planned Journey -->
+          <div style="border-left: 1px solid var(--border-subtle); padding-left: 1.5rem;">
+            <h3 style="font-size: 1.1rem; color: var(--navy-900); margin-bottom: 1rem;">
+              📋 Or Activate Planned Trip
+            </h3>
+            <div id="planned-trips-selector-container">
+              <div style="text-align: center; padding: 2rem 1rem; color: var(--text-muted);">
+                <span class="loading-spinner"></span> Loading planned journeys...
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 2: Real-time Device Power Health -->
+    <div class="card" id="section-battery-telemetry" style="margin-bottom: 2rem;">
+      <div class="card-header">
+        <h2 class="card-title" style="font-size: 1.15rem;">
+          <span>🔋</span> Device Power Telemetry
+        </h2>
+        <span class="badge badge-teal" id="battery-status-badge">HARDWARE TELEMETRY</span>
+      </div>
+
+      <div class="card-body">
+        <div id="battery-supported-container">
+          <div class="battery-display">
+            <div>
+              <div class="battery-level-container">
+                <span class="battery-percentage" id="battery-pct-display">--%</span>
+              </div>
+              <div class="battery-status-text" id="battery-state-subtext">
+                Reading battery hardware state...
+              </div>
+            </div>
+
+            <div class="battery-shell" aria-hidden="true" style="max-width: 140px;">
+              <div class="battery-fill" id="battery-fill-bar" style="width: 50%;"></div>
+            </div>
+          </div>
+
+          <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+            <div style="font-size: 0.85rem; color: var(--text-secondary);">
+              Thresholds: <span class="threshold-chip low">Low &le;20%</span> <span class="threshold-chip critical">Critical &le;10%</span>
+            </div>
+            <a href="low-battery.html" class="btn btn-sm btn-outline">
+              Open Full Low-Battery Guide →
+            </a>
+          </div>
+        </div>
+
+        <div id="battery-unsupported-container" class="alert alert-info" style="display: none; margin: 0;">
+          <strong>Battery status unavailable:</strong> The Battery Status API is restricted on this browser environment (e.g. Safari, Firefox, or iOS) for anti-fingerprinting privacy. We never fabricate battery readings. Safe travel protocols remain fully active.
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 3: Trusted Contacts Emergency Quick Dial / SMS -->
+    <div class="card" id="section-trusted-contacts" style="margin-bottom: 2rem;">
+      <div class="card-header">
+        <h2 class="card-title" style="font-size: 1.15rem;">
+          <span>👥</span> Trusted Contacts Quick Access
+        </h2>
+        <a href="emergency-contacts.html" class="btn btn-sm btn-outline">+ Manage Contacts</a>
+      </div>
+
+      <div class="card-body">
+        <p style="font-size: 0.9rem; color: var(--text-secondary); margin: 0 0 1rem;">
+          Instantly connect with your emergency contacts via direct telephone link or pre-filled emergency SMS message.
+        </p>
+
+        <div id="emergency-contacts-grid" class="contact-card-grid">
+          <div style="text-align: center; padding: 2rem; color: var(--text-muted); grid-column: 1 / -1;">
+            <span class="loading-spinner"></span> Loading contacts...
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Emergency QR Code Modal -->
+    <div class="modal-backdrop" id="emergency-qr-modal">
+      <div class="modal-dialog" style="max-width: 540px;">
+        <div class="card-header" style="background: linear-gradient(135deg, var(--navy-900), #1e293b); color: #fff;">
+          <h3 class="card-title" style="color: #38bdf8;">
+            <span>📱</span> Emergency Trip QR Code
+          </h3>
+          <button type="button" id="btn-close-qr-modal" class="btn btn-sm btn-outline" style="color: #fff; border-color: #475569;">✕</button>
+        </div>
+        <div class="card-body" style="padding: 1.5rem;">
+          <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 1.25rem;">
+            Anyone who scans this QR code will see a dedicated public emergency information page. Your private credentials, account history, and passwords are never exposed.
+          </p>
+
+          <!-- QR Display Box -->
+          <div id="qr-preview-container" style="text-align: center; padding: 1.25rem; background: #fff; border-radius: var(--radius-lg); border: 2px solid var(--border-subtle); margin-bottom: 1.25rem; box-shadow: var(--shadow-sm);">
+            <div id="qr-spinner" class="spinner" style="margin: 2rem auto;"></div>
+            <div id="qr-revoked-msg" style="display: none; padding: 2rem 1rem; color: var(--danger-600); font-weight: 700;">
+              ⚠️ Emergency sharing link has been revoked. Public access is disabled.
+            </div>
+            <img id="qr-image" src="" alt="Emergency Trip QR Code" style="display: none; max-width: 220px; width: 100%; height: auto; margin: 0 auto; border-radius: 8px;" />
+            <div id="qr-enlarged-view" style="display: none; margin-top: 1rem;">
+              <img id="qr-enlarged-img" src="" alt="Enlarged QR Code" style="max-width: 360px; width: 100%; height: auto; border: 2px solid #0f172a; border-radius: 10px;" />
+            </div>
+          </div>
+
+          <!-- Display, Enlarge & Download Actions -->
+          <div id="qr-action-buttons-group" style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; margin-bottom: 1.5rem;">
+            <button type="button" id="btn-enlarge-qr" class="btn btn-sm btn-navy">
+              🔍 Enlarge QR
+            </button>
+            <a id="btn-download-qr" href="#" class="btn btn-sm btn-teal" download="waysafe-emergency-qr.png">
+              📥 Download PNG
+            </a>
+            <button type="button" id="btn-copy-public-link" class="btn btn-sm btn-secondary">
+              📋 Copy Link
+            </button>
+          </div>
+
+          <!-- Consent Settings Section -->
+          <div style="background: var(--surface-alt); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1.25rem;">
+            <div style="font-weight: 700; font-size: 0.85rem; color: var(--navy-900); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.35rem;">
+              <span>🔒</span> Emergency Sharing Consent Controls
+            </div>
+            <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+              Explicitly choose which data is visible to responders scanning this QR code:
+            </p>
+            
+            <div style="display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.85rem;">
+              <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                <input type="checkbox" id="consent-share-location" checked />
+                <span>Share Last Known Location &amp; Timestamp</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                <input type="checkbox" id="consent-share-contact" checked />
+                <span>Share Emergency Contact Name &amp; Phone</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                <input type="checkbox" id="consent-share-eta" checked />
+                <span>Share Estimated Arrival Time (ETA)</span>
+              </label>
+              
+              <div style="margin-top: 0.5rem;">
+                <label for="consent-display-name" style="font-size: 0.78rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 0.25rem;">
+                  Responder Display Name (Optional)
+                </label>
+                <input type="text" id="consent-display-name" class="form-input form-input-sm" placeholder="e.g. Alex M." style="font-size: 0.82rem; padding: 0.35rem 0.65rem;" />
+              </div>
+            </div>
+
+            <div style="margin-top: 0.75rem; display: flex; justify-content: flex-end;">
+              <button type="button" id="btn-save-consent" class="btn btn-sm btn-outline">
+                Save Consent Settings
+              </button>
+            </div>
+          </div>
+
+          <!-- Danger Zone: Revoke Link -->
+          <div style="border-top: 1px solid var(--border-subtle); padding-top: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+            <span style="font-size: 0.75rem; color: var(--danger-600);">
+              Need to disable this QR code immediately?
+            </span>
+            <button type="button" id="btn-revoke-qr" class="btn btn-sm btn-outline-danger">
+              🛑 Revoke QR Link
+            </button>
+          </div>
+        </div>
+        <div class="card-footer" style="display: flex; justify-content: flex-end;">
+          <button type="button" id="btn-dismiss-qr-modal" class="btn btn-secondary">Close</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Shared Footer -->
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div>
+        <div style="font-weight: 700; color: var(--navy-900);">WaySafe — Emergency Travel Mode</div>
+        <div class="footer-disclaimer">Real-time safety command and emergency contact coordination.</div>
+      </div>
+      <ul class="footer-links">
+        <li><a href="dashboard.html">Dashboard</a></li>
+        <li><a href="trip-setup.html">Plan Journey</a></li>
+        <li><a href="accessibility-planner.html">Accessibility Planner</a></li>
+        <li><a href="emergency-contacts.html">Emergency Contacts</a></li>
+        <li><a href="trip-history.html">Trip History</a></li>
+      </ul>
+    </div>
+  </footer>
+
+  <script type="module" src="js/app.js"></script>
+
+  <script type="module">
+    import { requireAuth, getCurrentUser, logout } from './js/auth.js';
+    import { tripsService } from './js/trips.js';
+    import { contactsService } from './js/contacts.js';
+    import { batteryMonitor } from './js/battery.js';
+    import { locationService } from './js/location.js';
+    import { showToast, formatDate, escapeHtml } from './js/app.js';
+    import { api } from './js/api.js';
+
+    let currentActiveTrip = null;
+    let userContacts = [];
+    let batteryState = null;
+
+    async function initPage() {
+      const isAuth = await requireAuth();
+      if (!isAuth) return;
+
+      const user = getCurrentUser();
+
+      // 1. Initialize battery monitoring
+      initBatteryTelemetry();
+
+      // 2. Load contacts & populate dropdown
+      await loadContacts();
+
+      // 3. Check for active trip or planned trips
+      await refreshTripState();
+
+      // 4. Bind forms & handlers
+      setupEventHandlers();
+      setupEmergencyQrModal();
+    }
+
+    let currentShareTokenData = null;
+
+    function setupEmergencyQrModal() {
+      const modal = document.getElementById('emergency-qr-modal');
+      const openBtn = document.getElementById('btn-show-emergency-qr');
+      const closeBtn = document.getElementById('btn-close-qr-modal');
+      const dismissBtn = document.getElementById('btn-dismiss-qr-modal');
+      const enlargeBtn = document.getElementById('btn-enlarge-qr');
+      const downloadLink = document.getElementById('btn-download-qr');
+      const copyBtn = document.getElementById('btn-copy-public-link');
+      const saveConsentBtn = document.getElementById('btn-save-consent');
+      const revokeBtn = document.getElementById('btn-revoke-qr');
+
+      const qrSpinner = document.getElementById('qr-spinner');
+      const qrImg = document.getElementById('qr-image');
+      const qrRevokedMsg = document.getElementById('qr-revoked-msg');
+      const qrEnlargedView = document.getElementById('qr-enlarged-view');
+      const qrEnlargedImg = document.getElementById('qr-enlarged-img');
+      const actionGroup = document.getElementById('qr-action-buttons-group');
+
+      const consentLoc = document.getElementById('consent-share-location');
+      const consentContact = document.getElementById('consent-share-contact');
+      const consentEta = document.getElementById('consent-share-eta');
+      const consentName = document.getElementById('consent-display-name');
+
+      async function loadShareDetails() {
+        if (!currentActiveTrip) return;
+        qrSpinner.style.display = 'block';
+        qrImg.style.display = 'none';
+        qrRevokedMsg.style.display = 'none';
+        qrEnlargedView.style.display = 'none';
+
+        try {
+          const data = await tripsService.getShareToken(currentActiveTrip.id);
+          currentShareTokenData = data;
+
+          qrSpinner.style.display = 'none';
+
+          if (data.shareRevoked) {
+            qrRevokedMsg.style.display = 'block';
+            actionGroup.style.display = 'none';
+            revokeBtn.disabled = true;
+            revokeBtn.textContent = 'Already Revoked';
+          } else {
+            qrImg.src = data.qrCodeDataUrl;
+            qrImg.style.display = 'block';
+            qrEnlargedImg.src = data.qrCodeDataUrl;
+            actionGroup.style.display = 'flex';
+            revokeBtn.disabled = false;
+            revokeBtn.textContent = '🛑 Revoke QR Link';
+
+            const protocol = window.location.protocol;
+            const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            const apiBase = (!isLocal || window.location.port === '5000' || !window.location.port) ? '' : `${protocol}//${window.location.hostname}:5000`;
+            downloadLink.href = `${apiBase}/api/trips/${currentActiveTrip.id}/qr?download=true`;
+
+            const settings = data.shareSettings || {};
+            consentLoc.checked = settings.share_location !== false;
+            consentContact.checked = settings.share_contact !== false;
+            consentEta.checked = settings.share_eta !== false;
+            consentName.value = settings.display_name || '';
+          }
+        } catch (err) {
+          qrSpinner.style.display = 'none';
+          showToast(err.message || 'Failed to load emergency QR code', 'danger');
+        }
+      }
+
+      openBtn?.addEventListener('click', async () => {
+        if (!currentActiveTrip) {
+          showToast('No active journey in progress.', 'warning');
+          return;
+        }
+        modal.classList.add('active');
+        await loadShareDetails();
+      });
+
+      const closeModal = () => modal.classList.remove('active');
+      closeBtn?.addEventListener('click', closeModal);
+      dismissBtn?.addEventListener('click', closeModal);
+
+      enlargeBtn?.addEventListener('click', () => {
+        if (qrEnlargedView.style.display === 'none') {
+          qrEnlargedView.style.display = 'block';
+          qrImg.style.display = 'none';
+          enlargeBtn.textContent = 'Standard Size';
+        } else {
+          qrEnlargedView.style.display = 'none';
+          qrImg.style.display = 'block';
+          enlargeBtn.textContent = '🔍 Enlarge QR';
+        }
+      });
+
+      copyBtn?.addEventListener('click', async () => {
+        if (!currentShareTokenData || !currentShareTokenData.shareUrl) return;
+        try {
+          await navigator.clipboard.writeText(currentShareTokenData.shareUrl);
+          showToast('Public emergency trip link copied to clipboard!', 'success');
+        } catch (e) {
+          prompt('Copy public emergency trip link:', currentShareTokenData.shareUrl);
+        }
+      });
+
+      saveConsentBtn?.addEventListener('click', async () => {
+        if (!currentActiveTrip) return;
+        saveConsentBtn.disabled = true;
+        saveConsentBtn.textContent = 'Saving...';
+        try {
+          await tripsService.updateShareSettings(currentActiveTrip.id, {
+            share_location: consentLoc.checked,
+            share_contact: consentContact.checked,
+            share_eta: consentEta.checked,
+            display_name: consentName.value.trim()
+          });
+          showToast('Emergency sharing consent settings updated!', 'success');
+        } catch (err) {
+          showToast(err.message || 'Failed to update consent settings', 'danger');
+        } finally {
+          saveConsentBtn.disabled = false;
+          saveConsentBtn.textContent = 'Save Consent Settings';
+        }
+      });
+
+      revokeBtn?.addEventListener('click', async () => {
+        if (!currentActiveTrip) return;
+        const confirmRevoke = confirm('Are you sure you want to revoke this emergency sharing QR code? Anyone who scanned it will no longer be able to see this trip.');
+        if (!confirmRevoke) return;
+
+        revokeBtn.disabled = true;
+        revokeBtn.textContent = 'Revoking...';
+        try {
+          await tripsService.revokeShareToken(currentActiveTrip.id);
+          showToast('Emergency QR sharing link revoked successfully.', 'info');
+          await loadShareDetails();
+        } catch (err) {
+          showToast(err.message || 'Failed to revoke link', 'danger');
+          revokeBtn.disabled = false;
+          revokeBtn.textContent = '🛑 Revoke QR Link';
+        }
+      });
+    }
+
+    async function initBatteryTelemetry() {
+      const batteryRes = await batteryMonitor.init();
+      const supportedView = document.getElementById('battery-supported-container');
+      const unsupportedView = document.getElementById('battery-unsupported-container');
+
+      if (batteryRes && batteryRes.supported && batteryRes.state) {
+        supportedView.style.display = 'block';
+        unsupportedView.style.display = 'none';
+        updateBatteryUI(batteryRes.state);
+
+        batteryMonitor.onChange(state => {
+          updateBatteryUI(state);
+        });
+      } else {
+        supportedView.style.display = 'none';
+        unsupportedView.style.display = 'block';
+        document.getElementById('battery-status-badge').textContent = 'UNSUPPORTED BROWSER';
+        document.getElementById('battery-status-badge').className = 'badge badge-warning';
+      }
+    }
+
+    function updateBatteryUI(state) {
+      batteryState = state;
+      const pctDisplay = document.getElementById('battery-pct-display');
+      const subtext = document.getElementById('battery-state-subtext');
+      const fillBar = document.getElementById('battery-fill-bar');
+      const badge = document.getElementById('battery-status-badge');
+
+      pctDisplay.textContent = `${state.level}%`;
+      fillBar.style.width = `${state.level}%`;
+
+      if (state.isCritical) {
+        fillBar.style.backgroundColor = 'var(--danger-600)';
+        pctDisplay.style.color = 'var(--danger-600)';
+        subtext.textContent = 'CRITICAL BATTERY: Please preserve charge and inform your contacts immediately.';
+        badge.textContent = 'CRITICAL <=10%';
+        badge.className = 'badge badge-danger';
+      } else if (state.isLow) {
+        fillBar.style.backgroundColor = 'var(--warning-500)';
+        pctDisplay.style.color = 'var(--warning-600)';
+        subtext.textContent = state.isCharging ? 'Low Battery — Currently Charging' : 'Low Battery: Conserve device power and consider check-in.';
+        badge.textContent = 'LOW <=20%';
+        badge.className = 'badge badge-warning';
+      } else {
+        fillBar.style.backgroundColor = 'var(--teal-500)';
+        pctDisplay.style.color = 'var(--navy-900)';
+        subtext.textContent = state.isCharging ? 'Battery Healthy — Charging' : 'Battery level sufficient for travel.';
+        badge.textContent = state.isCharging ? 'CHARGING' : 'HEALTHY';
+        badge.className = 'badge badge-teal';
+      }
+    }
+
+    async function loadContacts() {
+      try {
+        userContacts = await contactsService.list();
+        renderContactsGrid(userContacts);
+        populateContactsSelect(userContacts);
+      } catch (err) {
+        console.error('Failed to load contacts:', err);
+        document.getElementById('emergency-contacts-grid').innerHTML = `
+          <div style="color: var(--danger-600); grid-column: 1 / -1;">
+            Failed to load contacts: ${escapeHtml(err.message)}
+          </div>
+        `;
+      }
+    }
+
+    function populateContactsSelect(contacts) {
+      const select = document.getElementById('eq-contact');
+      if (!select) return;
+
+      select.innerHTML = '<option value="">Select a trusted contact (optional)...</option>';
+      contacts.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = `${c.name} (${c.relationship || 'Contact'}) — ${c.phone}`;
+        select.appendChild(opt);
+      });
+    }
+
+    function renderContactsGrid(contacts) {
+      const container = document.getElementById('emergency-contacts-grid');
+      if (!contacts || contacts.length === 0) {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 2rem; color: var(--text-muted); grid-column: 1 / -1; background: var(--surface-alt); border-radius: var(--radius-md);">
+            <div>👥 No trusted contacts added yet.</div>
+            <a href="emergency-contacts.html" class="btn btn-sm btn-primary" style="margin-top: 0.75rem;">
+              + Add Trusted Emergency Contact
+            </a>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = contacts.map(c => {
+        const destName = currentActiveTrip ? (typeof currentActiveTrip.destination === 'object' ? currentActiveTrip.destination.name : currentActiveTrip.destination) : 'my destination';
+        const batteryText = batteryState ? ` Current battery: ${batteryState.level}%.` : '';
+        const smsMessage = `WaySafe Alert: I am traveling in Emergency Mode toward ${destName}.${batteryText} Please monitor my journey.`;
+        const smsUrl = contactsService.createSmsLink(c.phone, smsMessage);
+        const telUrl = contactsService.createCallLink(c.phone);
+
+        return `
+          <div class="contact-action-card">
+            <div>
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+                <strong style="color: var(--navy-900); font-size: 1.05rem;">${escapeHtml(c.name)}</strong>
+                ${c.isPrimary ? '<span class="badge badge-teal" style="font-size: 0.7rem;">PRIMARY</span>' : ''}
+              </div>
+              <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.25rem;">
+                ${escapeHtml(c.relationship || 'Emergency Contact')}
+              </div>
+              <div style="font-size: 0.9rem; font-weight: 600; color: var(--navy-800); margin-bottom: 1rem;">
+                ${escapeHtml(c.phone)}
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: auto;">
+              <a href="${telUrl}" class="btn btn-sm btn-secondary" style="flex: 1;">
+                📞 Call
+              </a>
+              <a href="${smsUrl}" class="btn btn-sm btn-primary" style="flex: 1;">
+                💬 SMS
+              </a>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function refreshTripState() {
+      try {
+        currentActiveTrip = await tripsService.getActive();
+
+        const badgeMode = document.getElementById('badge-mode-state');
+        const badgeControl = document.getElementById('trip-control-badge');
+        const viewActive = document.getElementById('view-active-trip');
+        const viewNoActive = document.getElementById('view-no-active-trip');
+
+        if (currentActiveTrip) {
+          badgeMode.textContent = 'EMERGENCY TRIP ACTIVE';
+          badgeMode.className = 'badge badge-danger';
+          badgeControl.textContent = 'IN PROGRESS';
+          badgeControl.className = 'badge badge-teal';
+
+          viewActive.style.display = 'block';
+          viewNoActive.style.display = 'none';
+
+          const destName = typeof currentActiveTrip.destination === 'object' ? (currentActiveTrip.destination.name || 'Destination') : currentActiveTrip.destination;
+          const originName = typeof currentActiveTrip.startLocation === 'object' ? (currentActiveTrip.startLocation.name || 'Current Location') : (currentActiveTrip.startLocation || 'Not specified');
+
+          document.getElementById('active-dest-text').textContent = destName;
+          document.getElementById('active-origin-text').textContent = `From: ${originName}`;
+          document.getElementById('active-started-text').textContent = formatDate(currentActiveTrip.startedAt || currentActiveTrip.createdAt);
+
+          // Find contact name
+          const contact = userContacts.find(c => c.id === currentActiveTrip.trustedContactId);
+          document.getElementById('active-contact-text').textContent = contact ? `Contact: ${contact.name} (${contact.phone})` : 'Contact: None linked';
+
+          // Load check-in history
+          loadTripCheckins(currentActiveTrip.id);
+        } else {
+          badgeMode.textContent = 'STANDBY';
+          badgeMode.className = 'badge badge-navy';
+          badgeControl.textContent = 'NO ACTIVE TRIP';
+          badgeControl.className = 'badge badge-secondary';
+
+          viewActive.style.display = 'none';
+          viewNoActive.style.display = 'block';
+
+          // Load planned trips to activate
+          loadPlannedTrips();
+        }
+
+        // Re-render contacts to update sms pre-fill with current destination
+        renderContactsGrid(userContacts);
+      } catch (err) {
+        console.error('Failed to refresh trip state:', err);
+      }
+    }
+
+    async function loadTripCheckins(tripId) {
+      const container = document.getElementById('checkins-history-list');
+      try {
+        const checkins = await tripsService.getCheckins(tripId);
+        if (!checkins || checkins.length === 0) {
+          container.innerHTML = `
+            <div style="padding: 1rem; text-align: center; color: var(--text-muted); font-size: 0.85rem;">
+              No check-ins recorded yet for this journey.
+            </div>
+          `;
+          return;
+        }
+
+        container.innerHTML = checkins.slice(0, 5).map(c => {
+          const timeStr = formatDate(c.checkedInAt || c.createdAt);
+          const hasCoords = (c.latitude !== null && c.latitude !== undefined && c.longitude !== null && c.longitude !== undefined);
+          const mapLink = hasCoords ? `<a href="https://www.openstreetmap.org/?mlat=${c.latitude}&mlon=${c.longitude}#map=16/${c.latitude}/${c.longitude}" target="_blank" style="font-size: 0.8rem; margin-left: 0.5rem;">📍 View Map</a>` : '';
+
+          return `
+            <div class="checkin-log-item">
+              <div>
+                <strong style="color: var(--teal-700);">✅ Check-in recorded</strong>
+                <span style="color: var(--text-secondary); font-size: 0.85rem; margin-left: 0.25rem;">${c.message || c.note || ''}</span>
+                ${mapLink}
+              </div>
+              <div style="font-size: 0.8rem; color: var(--text-muted);">
+                ${timeStr}
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (e) {
+        container.innerHTML = `<div style="padding: 1rem; color: var(--text-muted);">Unable to load check-ins history.</div>`;
+      }
+    }
+
+    async function loadPlannedTrips() {
+      const container = document.getElementById('planned-trips-selector-container');
+      try {
+        const plannedTrips = await tripsService.list({ status: 'planned' });
+        if (!plannedTrips || plannedTrips.length === 0) {
+          container.innerHTML = `
+            <div style="text-align: center; padding: 1.5rem 1rem; color: var(--text-muted); font-size: 0.9rem;">
+              No planned trips found. Use the form on the left to start an immediate journey.
+            </div>
+          `;
+          return;
+        }
+
+        container.innerHTML = plannedTrips.map(t => {
+          const destName = typeof t.destination === 'object' ? (t.destination.name || 'Destination') : t.destination;
+          return `
+            <div style="padding: 0.75rem 1rem; background: var(--surface-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); margin-bottom: 0.75rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+              <div>
+                <strong style="color: var(--navy-900); font-size: 0.95rem;">${escapeHtml(t.title || `Trip to ${destName}`)}</strong>
+                <div style="font-size: 0.8rem; color: var(--text-secondary);">Dest: ${escapeHtml(destName)}</div>
+              </div>
+              <button type="button" class="btn btn-sm btn-primary btn-activate-planned" data-id="${t.id}">
+                Start This Trip →
+              </button>
+            </div>
+          `;
+        }).join('');
+
+        container.querySelectorAll('.btn-activate-planned').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const id = btn.getAttribute('data-id');
+            await startPlannedTrip(id);
+          });
+        });
+      } catch (e) {
+        container.innerHTML = `<div style="color: var(--text-muted);">Could not fetch planned trips.</div>`;
+      }
+    }
+
+    async function startPlannedTrip(tripId) {
+      try {
+        showToast('Activating emergency travel...', 'info');
+        await api.trips.start(tripId);
+        showToast('Emergency travel mode active!', 'success');
+        await refreshTripState();
+      } catch (err) {
+        showToast(`Could not start trip: ${err.message}`, 'danger');
+      }
+    }
+
+    function setupEventHandlers() {
+      // 1. Submit Quick Emergency Trip
+      document.getElementById('emergency-quick-trip-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const dest = document.getElementById('eq-destination').value.trim();
+        const origin = document.getElementById('eq-origin').value.trim();
+        const contactId = document.getElementById('eq-contact').value || null;
+        const consent = document.getElementById('eq-consent').checked;
+
+        if (!dest) {
+          showToast('Please specify a destination.', 'warning');
+          return;
+        }
+
+        try {
+          showToast('Creating and launching emergency trip...', 'info');
+          const now = new Date();
+          const eta = new Date(now.getTime() + 60 * 60 * 1000); // Default +1 hour estimate
+
+          const newTrip = await tripsService.create({
+            title: `Emergency Trip to ${dest}`,
+            tripName: `Emergency Trip to ${dest}`,
+            destination: dest,
+            startLocation: origin || 'Current Location',
+            departureTime: now.toISOString(),
+            estimatedArrival: eta.toISOString(),
+            trustedContactId: contactId,
+            locationSharingConsent: consent,
+            emergencyNotes: 'Activated via Emergency Travel Mode.'
+          });
+
+          // Immediately start it
+          await api.trips.start(newTrip.id);
+          showToast('Emergency journey active!', 'success');
+          await refreshTripState();
+        } catch (err) {
+          console.error(err);
+          showToast(`Error creating trip: ${err.message}`, 'danger');
+        }
+      });
+
+      // 2. Submit Check-in
+      document.getElementById('btn-submit-emergency-checkin')?.addEventListener('click', async () => {
+        if (!currentActiveTrip) return;
+
+        const note = document.getElementById('checkin-note-input').value.trim();
+        const consentGps = document.getElementById('checkin-gps-consent').checked;
+        const submitBtn = document.getElementById('btn-submit-emergency-checkin');
+
+        submitBtn.disabled = true;
+        showToast('Recording check-in...', 'info');
+
+        let coords = null;
+        if (consentGps) {
+          try {
+            const pos = await locationService.getCurrentPosition();
+            coords = {
+              latitude: pos.latitude,
+              longitude: pos.longitude,
+              accuracy: pos.accuracy
+            };
+          } catch (posErr) {
+            console.warn('GPS position could not be acquired:', posErr);
+            showToast('GPS unavailable; recording check-in without coordinates.', 'warning');
+          }
+        }
+
+        try {
+          const payload = {
+            type: 'emergency',
+            note: note || 'Emergency check-in performed.',
+            location_consent: consentGps,
+            battery_level: batteryState ? batteryState.level : null,
+            is_charging: batteryState ? batteryState.isCharging : null
+          };
+
+          if (coords && consentGps) {
+            payload.latitude = coords.latitude;
+            payload.longitude = coords.longitude;
+            payload.accuracy = coords.accuracy;
+          }
+
+          await tripsService.recordCheckin(currentActiveTrip.id, payload);
+          showToast('Emergency check-in saved successfully!', 'success');
+          document.getElementById('checkin-note-input').value = '';
+          await loadTripCheckins(currentActiveTrip.id);
+        } catch (checkinErr) {
+          showToast(`Check-in failed: ${checkinErr.message}`, 'danger');
+        } finally {
+          submitBtn.disabled = false;
+        }
+      });
+
+      // 3. End Journey
+      document.getElementById('btn-end-emergency-trip')?.addEventListener('click', async () => {
+        if (!currentActiveTrip) return;
+
+        if (!confirm('Are you sure you want to conclude this emergency journey? Your completion report will be archived.')) {
+          return;
+        }
+
+        try {
+          showToast('Ending journey...', 'info');
+          await api.trips.end(currentActiveTrip.id);
+          showToast('Journey ended safely.', 'success');
+          window.location.href = `trip-completed.html?id=${currentActiveTrip.id}`;
+        } catch (err) {
+          showToast(`Failed to end trip: ${err.message}`, 'danger');
+        }
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', initPage);
+  </script>
+</body>
+</html>

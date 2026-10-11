@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — WaySafe Travel Command</title>
+  <meta name="description" content="WaySafe personal travel safety dashboard with battery health, active journey monitoring, trusted contacts, and readiness checklist.">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+
+  <!-- Shared Header -->
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="index.html" class="brand-link" id="brand-link">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+        </div>
+        <div class="brand-name">Way<span>Safe</span></div>
+      </a>
+
+      <button class="mobile-nav-toggle" id="mobile-nav-toggle" aria-label="Toggle navigation">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+      </button>
+
+      <nav class="main-nav" id="main-nav">
+        <ul class="nav-links">
+          <li><a href="dashboard.html" class="nav-link active">Dashboard</a></li>
+          <li><a href="trip-setup.html" class="nav-link">Plan Journey</a></li>
+          <li><a href="emergency-travel.html" class="nav-link">Emergency Travel</a></li>
+          <li><a href="accessibility-planner.html" class="nav-link">Accessibility</a></li>
+          <li><a href="low-battery.html" class="nav-link">Low-Battery Guide</a></li>
+          <li><a href="emergency-contacts.html" class="nav-link">Contacts</a></li>
+          <li><a href="trip-history.html" class="nav-link">History</a></li>
+        </ul>
+
+        <div class="nav-auth" id="nav-auth-container">
+          <!-- Populated by auth/dashboard module -->
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Dashboard Main Content -->
+  <main class="main-content">
+    <!-- Welcome Header & Global Quick Actions -->
+    <div class="page-header">
+      <div class="page-header-text">
+        <h1 id="welcome-heading">Welcome Back, Traveler</h1>
+        <p id="welcome-sub">Monitor your journey, battery health, and emergency contacts in real time.</p>
+      </div>
+      <div class="page-header-actions">
+        <button type="button" class="btn btn-secondary" id="btn-refresh-dashboard" aria-label="Refresh dashboard data">
+          <span>↻</span> Refresh
+        </button>
+        <a href="trip-setup.html" class="btn btn-primary" id="btn-start-trip">
+          <span>🚀</span> Start Safe Trip
+        </a>
+      </div>
+    </div>
+
+    <!-- Featured Travel Modes: Emergency Travel Mode & Accessibility Planner Mode -->
+    <div class="card-grid-2" style="margin-bottom: 2rem;" id="featured-travel-modes">
+      <!-- Emergency Travel Mode Card -->
+      <div class="card" id="card-emergency-travel" style="border-left: 4px solid var(--danger-600); display: flex; flex-direction: column; justify-content: space-between;">
+        <div class="card-header" style="background: transparent; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.75rem;">
+          <h2 class="card-title" style="font-size: 1.15rem; color: var(--navy-900);">
+            <span>🛡️</span> Emergency Travel Mode
+          </h2>
+          <span class="badge badge-danger">HIGH CAUTION</span>
+        </div>
+        <div class="card-body" style="flex: 1;">
+          <p style="color: var(--text-secondary); font-size: 0.925rem; line-height: 1.5; margin: 0 0 1.25rem;">
+            Plan a safer journey, monitor available battery information, manage check-ins, and access trusted contacts.
+          </p>
+          <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">
+            ⚡ Hardware Battery Telemetry • 📍 Consensual Check-ins • 👥 Instant SOS SMS
+          </div>
+        </div>
+        <div class="card-footer" style="background: var(--surface-alt); border-top: 1px solid var(--border-subtle); padding: 0.85rem 1.25rem;">
+          <a href="emergency-travel.html" class="btn btn-danger" id="btn-start-emergency-travel" style="width: 100%;">
+            <span>🚨</span> Start Emergency Travel
+          </a>
+        </div>
+      </div>
+
+      <!-- Accessibility Planner Mode Card -->
+      <div class="card" id="card-accessibility-planner" style="border-left: 4px solid var(--teal-600); display: flex; flex-direction: column; justify-content: space-between;">
+        <div class="card-header" style="background: transparent; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.75rem;">
+          <h2 class="card-title" style="font-size: 1.15rem; color: var(--navy-900);">
+            <span>♿</span> Accessibility Planner Mode
+          </h2>
+          <span class="badge badge-teal">INCLUSIVE MOBILITY</span>
+        </div>
+        <div class="card-body" style="flex: 1;">
+          <p style="color: var(--text-secondary); font-size: 0.925rem; line-height: 1.5; margin: 0 0 1.25rem;">
+            Plan a journey around accessibility preferences and available route information.
+          </p>
+          <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">
+            🛗 Step-Free Access • ♿ Wheelchair Ramps • 📢 Visual & Audio Transit Aids
+          </div>
+        </div>
+        <div class="card-footer" style="background: var(--surface-alt); border-top: 1px solid var(--border-subtle); padding: 0.85rem 1.25rem;">
+          <a href="accessibility-planner.html" class="btn btn-primary" id="btn-open-accessibility-planner" style="width: 100%;">
+            <span>♿</span> Open Accessibility Planner
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 1: Battery Status & Safety Readiness Checklist -->
+    <div class="card-grid-2" style="margin-bottom: 2rem;">
+      <!-- Battery Status Card -->
+      <div class="card battery-card" id="battery-card">
+        <div class="card-header" style="background: transparent; border-bottom: none; padding-bottom: 0;">
+          <h2 class="card-title" style="font-size: 1.15rem;">
+            <span>🔋</span> Device Power Status
+          </h2>
+          <span class="badge badge-teal" id="battery-badge">STANDARD MONITOR</span>
+        </div>
+
+        <div class="card-body">
+          <!-- Supported Battery Display -->
+          <div id="battery-supported-view">
+            <div class="battery-display">
+              <div>
+                <div class="battery-level-container">
+                  <span class="battery-percentage" id="battery-percentage">--%</span>
+                </div>
+                <div class="battery-status-text" id="battery-status-text">
+                  Detecting device power state...
+                </div>
+              </div>
+
+              <div class="battery-shell" aria-hidden="true">
+                <div class="battery-fill" id="battery-fill" style="width: 50%;"></div>
+              </div>
+            </div>
+
+            <!-- Configurable Threshold Indicators -->
+            <div style="margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+              <span class="threshold-indicator">
+                <strong>Safety Thresholds:</strong>
+                <span class="threshold-chip low" title="Low battery warning alert triggers at 20%">Low &le;20%</span>
+                <span class="threshold-chip critical" title="Critical low battery SOS triggers at 10%">Critical &le;10%</span>
+              </span>
+              <a href="low-battery.html" class="btn btn-sm btn-outline">Power Guide →</a>
+            </div>
+          </div>
+
+          <!-- Unsupported Battery Fallback Notice -->
+          <div id="battery-unsupported-notice" class="alert alert-info" style="display: none; margin-top: 0;">
+            <div style="display: flex; gap: 0.75rem; align-items: flex-start;">
+              <span style="font-size: 1.5rem; line-height: 1;">ℹ️</span>
+              <div>
+                <strong style="display: block; margin-bottom: 0.25rem;">Battery status unavailable</strong>
+                <p style="font-size: 0.85rem; margin-bottom: 0.5rem; color: inherit;">
+                  The Battery Status API is restricted on this browser (e.g. Safari, Firefox, or iOS) for anti-fingerprinting privacy. We never fabricate battery readings.
+                </p>
+                <div style="font-size: 0.825rem; color: var(--navy-900); font-weight: 500;">
+                  <strong>Recommended Safety Tips:</strong>
+                  <ul style="margin: 0.25rem 0 0 1.25rem; line-height: 1.4;">
+                    <li>Keep a certified portable battery pack accessible</li>
+                    <li>Lower screen brightness and close background GPS apps</li>
+                    <li>Send periodic check-ins before low power triggers</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-footer" style="background: transparent; border-top: 1px solid var(--border-subtle); justify-content: space-between;">
+          <span style="font-size: 0.8rem; color: var(--text-muted);" id="battery-reading-note">
+            Real hardware readings via W3C Battery Status API
+          </span>
+          <a href="low-battery.html" class="btn btn-sm btn-outline" style="border-color: var(--warning-500); color: var(--warning-600);">
+            ⚡ Low Battery Mode
+          </a>
+        </div>
+      </div>
+
+      <!-- Safety Readiness Checklist Card -->
+      <div class="card" id="readiness-card">
+        <div class="card-header">
+          <h2 class="card-title" style="font-size: 1.15rem;">
+            <span>🛡️</span> Safety Readiness Checklist
+          </h2>
+          <span class="badge badge-teal" id="readiness-badge">PRE-TRIP CHECK</span>
+        </div>
+
+        <div class="card-body">
+          <div class="readiness-header">
+            <span style="font-size: 0.85rem; color: var(--text-muted);">Trip Departure Preparedness</span>
+            <span class="readiness-score" id="readiness-score">0 of 5 Ready (0%)</span>
+          </div>
+
+          <div class="readiness-progress-track">
+            <div class="readiness-progress-fill" id="readiness-progress-fill" style="width: 0%;"></div>
+          </div>
+
+          <div class="readiness-list" id="readiness-checklist">
+            <label class="readiness-item" id="check-item-1">
+              <input type="checkbox" data-index="1">
+              <div>
+                <span class="readiness-label">Phone Battery &ge; 50% or Power Bank Packed</span>
+                <span class="readiness-desc">Ensure enough power for unexpected delays and navigation</span>
+              </div>
+            </label>
+
+            <label class="readiness-item" id="check-item-2">
+              <input type="checkbox" data-index="2">
+              <div>
+                <span class="readiness-label">Primary Emergency Contact Confirmed</span>
+                <span class="readiness-desc">Verify phone number and availability for safety notifications</span>
+              </div>
+            </label>
+
+            <label class="readiness-item" id="check-item-3">
+              <input type="checkbox" data-index="3">
+              <div>
+                <span class="readiness-label">Destination & Route Shared with Contact</span>
+                <span class="readiness-desc">Inform someone trusted of your intended travel path</span>
+              </div>
+            </label>
+
+            <label class="readiness-item" id="check-item-4">
+              <input type="checkbox" data-index="4">
+              <div>
+                <span class="readiness-label">Consent-Based GPS Location Enabled</span>
+                <span class="readiness-desc">Grant browser location permission for check-ins</span>
+              </div>
+            </label>
+
+            <label class="readiness-item" id="check-item-5">
+              <input type="checkbox" data-index="5">
+              <div>
+                <span class="readiness-label">Low-Battery Emergency Procedure Reviewed</span>
+                <span class="readiness-desc">Understand emergency check-in steps before battery drops &le;10%</span>
+              </div>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 2: Active Journey Card & Trusted Contacts Summary -->
+    <div class="card-grid-2" style="margin-bottom: 2rem;">
+      <!-- Active Trip Section -->
+      <div class="card" id="active-trip-card">
+        <div class="card-header">
+          <h2 class="card-title" style="font-size: 1.15rem;">
+            <span>📍</span> Current Journey Status
+          </h2>
+          <div id="active-trip-header-action"></div>
+        </div>
+
+        <div class="card-body" id="active-trip-container">
+          <!-- Rendered dynamically by dashboard.js -->
+          <div style="text-align: center; padding: 2.5rem 1.5rem; color: var(--text-muted);">
+            <span class="loading-spinner" style="border-color: var(--teal-500); border-top-color: transparent;"></span>
+            <span>Checking active journey status...</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Trusted Emergency Contacts Summary -->
+      <div class="card" id="contacts-card">
+        <div class="card-header">
+          <h2 class="card-title" style="font-size: 1.15rem;">
+            <span>👥</span> Trusted Emergency Contacts
+          </h2>
+          <a href="emergency-contacts.html" class="btn btn-sm btn-outline">+ Manage</a>
+        </div>
+
+        <div class="card-body" style="padding: 0;" id="contacts-list-container">
+          <!-- Rendered dynamically by dashboard.js -->
+          <div style="text-align: center; padding: 2.5rem 1.5rem; color: var(--text-muted);">
+            <span class="loading-spinner" style="border-color: var(--teal-500); border-top-color: transparent;"></span>
+            <span>Loading trusted contacts...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 3: Recent Trip History & Safety Best Practices -->
+    <div class="card-grid-2" style="margin-bottom: 2rem;">
+      <!-- Recent Trip History Card -->
+      <div class="card" id="history-card">
+        <div class="card-header">
+          <h2 class="card-title" style="font-size: 1.15rem;">
+            <span>📜</span> Recent Trip History
+          </h2>
+          <a href="trip-history.html" class="btn btn-sm btn-outline">View All History →</a>
+        </div>
+
+        <div class="card-body" style="padding: 0;" id="recent-trips-container">
+          <!-- Rendered dynamically by dashboard.js -->
+          <div style="text-align: center; padding: 2.5rem 1.5rem; color: var(--text-muted);">
+            <span class="loading-spinner" style="border-color: var(--teal-500); border-top-color: transparent;"></span>
+            <span>Loading recent journeys...</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Safety Tips Card -->
+      <div class="card" id="safety-tips-card">
+        <div class="card-header">
+          <h2 class="card-title" style="font-size: 1.15rem;">
+            <span>💡</span> Travel Safety Best Practices
+          </h2>
+          <span class="badge badge-teal">TIPS</span>
+        </div>
+
+        <div class="card-body">
+          <div class="safety-tips-grid">
+            <div class="safety-tip-card">
+              <div class="safety-tip-icon">🪫</div>
+              <div>
+                <div class="safety-tip-title">Battery Thresholds</div>
+                <div class="safety-tip-text">
+                  When power drops to 20%, trigger a manual check-in. At 10%, send an emergency battery alert.
+                </div>
+              </div>
+            </div>
+
+            <div class="safety-tip-card">
+              <div class="safety-tip-icon">📍</div>
+              <div>
+                <div class="safety-tip-title">Consent-First Location</div>
+                <div class="safety-tip-text">
+                  WaySafe only captures your coordinates during an active journey with your explicit confirmation.
+                </div>
+              </div>
+            </div>
+
+            <div class="safety-tip-card">
+              <div class="safety-tip-icon">⏱️</div>
+              <div>
+                <div class="safety-tip-title">Routine Check-Ins</div>
+                <div class="safety-tip-text">
+                  On commutes over 30 minutes, perform a quick check-in halfway to keep contacts assured.
+                </div>
+              </div>
+            </div>
+
+            <div class="safety-tip-card">
+              <div class="safety-tip-icon">🎒</div>
+              <div>
+                <div class="safety-tip-title">Emergency Preparedness</div>
+                <div class="safety-tip-text">
+                  Memorize your primary contact's phone number in case of sudden hardware or network loss.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Shared Footer -->
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div>
+        <div style="font-weight: 700; color: var(--navy-900);">WaySafe — Travel Safety Platform</div>
+        <div class="footer-disclaimer">
+          OpenStreetMap tiles &copy; OpenStreetMap contributors. Client authentication via Supabase Auth.
+        </div>
+      </div>
+      <ul class="footer-links">
+        <li><a href="trip-setup.html">Plan Journey</a></li>
+        <li><a href="emergency-travel.html">Emergency Travel</a></li>
+        <li><a href="accessibility-planner.html">Accessibility Planner</a></li>
+        <li><a href="low-battery.html">Battery Guide</a></li>
+        <li><a href="emergency-contacts.html">Emergency Contacts</a></li>
+        <li><a href="trip-history.html">Trip History</a></li>
+      </ul>
+    </div>
+  </footer>
+
+  <script type="module" src="js/app.js"></script>
+  <script type="module" src="js/dashboard.js"></script>
+</body>
+</html>

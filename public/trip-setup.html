@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plan Journey — WaySafe</title>
+  <meta name="description" content="Configure route, destination, departure time, emergency contacts, and consent-based location sharing for your trip.">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  <!-- Leaflet CSS for OpenStreetMap -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <style>
+    .loading-spinner-inline {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: #fff;
+      animation: spin 0.6s linear infinite;
+      margin-right: 8px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .form-error {
+      color: var(--danger-600);
+      font-size: 0.8rem;
+      margin-top: 0.3rem;
+      display: none;
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Shared Header -->
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="index.html" class="brand-link" id="brand-link">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+        </div>
+        <div class="brand-name">Way<span>Safe</span></div>
+      </a>
+
+      <button class="mobile-nav-toggle" id="mobile-nav-toggle" aria-label="Toggle navigation">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+      </button>
+
+      <nav class="main-nav" id="main-nav">
+        <ul class="nav-links">
+          <li><a href="dashboard.html" class="nav-link">Dashboard</a></li>
+          <li><a href="trip-setup.html" class="nav-link active">Plan Journey</a></li>
+          <li><a href="emergency-travel.html" class="nav-link">Emergency Travel</a></li>
+          <li><a href="accessibility-planner.html" class="nav-link">Accessibility</a></li>
+          <li><a href="low-battery.html" class="nav-link">Low-Battery Guide</a></li>
+          <li><a href="emergency-contacts.html" class="nav-link">Contacts</a></li>
+          <li><a href="trip-history.html" class="nav-link">History</a></li>
+        </ul>
+
+        <div class="nav-auth" id="nav-auth-container"></div>
+      </nav>
+    </div>
+  </header>
+
+  <main class="main-content">
+    <div class="page-header">
+      <div class="page-header-text">
+        <h1>Plan Your Journey</h1>
+        <p>Set up travel details, destination coordinates, emergency contact, and location sharing.</p>
+      </div>
+      <div class="page-header-actions">
+        <a href="dashboard.html" class="btn btn-secondary">← Back to Dashboard</a>
+      </div>
+    </div>
+
+    <!-- Active Trip Alert Banner (if an active journey is already in progress) -->
+    <div id="active-trip-banner" class="alert alert-warning" style="display: none; margin-bottom: 1.5rem; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+      <div>
+        <strong>⚠️ Active Journey in Progress:</strong>
+        <span id="active-trip-banner-text">You currently have an active journey running.</span>
+      </div>
+      <div style="display: flex; gap: 0.5rem;">
+        <a href="trip-status.html" id="btn-banner-view" class="btn btn-sm btn-primary">Live Monitor & Map</a>
+        <button type="button" id="btn-banner-end" class="btn btn-sm btn-outline-danger">⏹️ End Active Trip</button>
+      </div>
+    </div>
+
+    <!-- Error Alert Box -->
+    <div id="trip-form-error" class="alert alert-danger" role="alert" style="display: none; margin-bottom: 1.5rem;"></div>
+
+    <form id="trip-setup-form" novalidate>
+      <div class="card-grid-2" style="margin-bottom: 1.5rem;">
+        
+        <!-- Left Column: Journey Details -->
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title" style="font-size: 1.15rem;"><span>📝</span> Route & Schedule</h2>
+          </div>
+          <div class="card-body">
+            <!-- Optional Trip Name -->
+            <div class="form-group">
+              <label class="form-label" for="trip-name">Trip Name <span style="font-weight: 400; color: var(--text-muted);">(Optional)</span></label>
+              <input type="text" id="trip-name" class="form-control" placeholder="e.g. Evening Commute, Walk Home, Train to Boston">
+              <div class="form-hint">If left blank, automatically named after your destination.</div>
+            </div>
+
+            <!-- Optional Starting Location -->
+            <div class="form-group">
+              <label class="form-label" for="start-location">Starting Location <span style="font-weight: 400; color: var(--text-muted);">(Optional)</span></label>
+              <div style="display: flex; gap: 0.5rem;">
+                <input type="text" id="start-location" class="form-control" placeholder="e.g. Work Office, Campus Library, Home">
+                <button type="button" id="btn-start-gps" class="btn btn-sm btn-secondary" title="Use current GPS as starting location">
+                  🎯 GPS
+                </button>
+              </div>
+            </div>
+
+            <!-- Required Destination -->
+            <div class="form-group">
+              <label class="form-label" for="destination-input">
+                Destination <span class="required" aria-hidden="true">*</span>
+              </label>
+              <input type="text" id="destination-input" class="form-control" placeholder="e.g. 742 Evergreen Terrace or click on map" required>
+              <div id="dest-error" class="form-error">Destination is required. Please specify an address or click the map.</div>
+              <div class="form-hint">Click anywhere on the OpenStreetMap on the right to place your destination pin.</div>
+            </div>
+
+            <!-- Departure Date and Time -->
+            <div class="form-group">
+              <label class="form-label" for="departure-time">Departure Date & Time</label>
+              <input type="datetime-local" id="departure-time" class="form-control">
+              <div class="form-hint">Defaults to now if you start your trip immediately.</div>
+            </div>
+
+            <!-- Estimated Arrival -->
+            <div class="form-group">
+              <label class="form-label" for="estimated-arrival">Estimated Arrival Date & Time</label>
+              <input type="datetime-local" id="estimated-arrival" class="form-control">
+              <div id="arrival-error" class="form-error">Estimated arrival must be later than departure time.</div>
+            </div>
+
+            <!-- Transport Mode -->
+            <div class="form-group">
+              <label class="form-label" for="transport-mode">Transport Mode</label>
+              <select id="transport-mode" class="form-select">
+                <option value="walking">🚶 Walking / On Foot</option>
+                <option value="transit" selected>🚆 Public Transit (Bus, Subway, Train)</option>
+                <option value="rideshare">🚕 Rideshare (Uber, Lyft, Taxi)</option>
+                <option value="driving">🚗 Personal Driving</option>
+                <option value="cycling">🚲 Cycling / Bike</option>
+                <option value="flight">✈️ Flight</option>
+                <option value="other">📍 Other</option>
+              </select>
+            </div>
+
+            <!-- Emergency Notes -->
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" for="emergency-notes">Emergency Notes <span style="font-weight: 400; color: var(--text-muted);">(Optional)</span></label>
+              <textarea id="emergency-notes" class="form-textarea" placeholder="e.g. Wearing navy coat; catching 8:15 express; backup charger in backpack."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Interactive Map, Battery & Contact Selection -->
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title" style="font-size: 1.15rem;"><span>🗺️</span> OpenStreetMap & Contacts</h2>
+            <button type="button" id="btn-detect-location" class="btn btn-sm btn-outline">
+              🎯 Pin GPS Location
+            </button>
+          </div>
+          <div class="card-body">
+            <!-- Map Container -->
+            <div class="map-wrapper" style="height: 240px; margin-bottom: 0.75rem;">
+              <div id="setup-map" class="map-container"></div>
+              <div class="map-overlay-badge" id="map-status-pill">
+                <span>📍</span> Click map to set pin
+              </div>
+            </div>
+
+            <div style="font-size: 0.8rem; color: var(--text-muted); display: flex; justify-content: space-between; margin-bottom: 1.25rem;">
+              <span id="coordinates-display">Coordinates: None selected</span>
+              <span id="accuracy-display">Accuracy: --</span>
+            </div>
+
+            <!-- Trusted Contact Selection -->
+            <div class="form-group">
+              <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                <label class="form-label" for="trusted-contact-select">
+                  Trusted Emergency Contact
+                </label>
+                <a href="emergency-contacts.html" style="font-size: 0.8rem;">+ Add Contact</a>
+              </div>
+              <select id="trusted-contact-select" class="form-select">
+                <option value="">-- No Contact Selected (Optional) --</option>
+              </select>
+              <div class="form-hint">Selected contact will receive check-in updates and battery alerts.</div>
+            </div>
+
+            <!-- Location-Sharing Consent Checkbox -->
+            <div class="form-group" style="background-color: var(--surface-alt); padding: 0.85rem 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+              <label class="checkbox-group" style="margin-bottom: 0;">
+                <input type="checkbox" id="location-sharing-consent" checked>
+                <span class="checkbox-label" style="font-size: 0.875rem;">
+                  <strong>Consent to Share Location:</strong> Allow consent-based GPS coordinate sharing with your trusted contact during this journey.
+                </span>
+              </label>
+            </div>
+
+            <!-- Initial Device Battery Reading -->
+            <div style="padding: 0.75rem 1rem; background-color: var(--surface-alt); border-radius: var(--radius-md); border: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
+              <div>
+                <span style="font-weight: 600; font-size: 0.875rem; color: var(--navy-900); display: block;">
+                  🔋 Initial Battery Level
+                </span>
+                <span style="font-size: 0.75rem; color: var(--text-muted);" id="battery-auto-tag">
+                  Detecting sensor...
+                </span>
+              </div>
+              <input type="number" id="starting-battery" class="form-control" min="1" max="100" style="max-width: 90px; text-align: center;" placeholder="80">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Submit Section with Save Trip and Start Trip actions -->
+      <div class="card">
+        <div class="card-body" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+          <a href="dashboard.html" class="btn btn-secondary">
+            Cancel
+          </a>
+
+          <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+            <!-- Save as Planned Trip Button -->
+            <button type="button" id="btn-save-planned" class="btn btn-navy btn-lg">
+              <span id="btn-save-spinner" class="loading-spinner-inline" style="display: none;"></span>
+              <span id="btn-save-label">💾 Save Trip</span>
+            </button>
+
+            <!-- Start Trip Button -->
+            <button type="submit" id="btn-start-now" class="btn btn-primary btn-lg">
+              <span id="btn-start-spinner" class="loading-spinner-inline" style="display: none;"></span>
+              <span id="btn-start-label">🚀 Start Trip</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </form>
+  </main>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  
+  <script type="module">
+    import { requireAuth, getCurrentUser, logout } from './js/auth.js';
+    import { tripsService } from './js/trips.js';
+    import { contactsService } from './js/contacts.js';
+    import { batteryMonitor } from './js/battery.js';
+    import { locationService } from './js/location.js';
+    import { showToast, escapeHtml } from './js/app.js';
+
+    let map = null;
+    let selectedMarker = null;
+    let selectedLat = null;
+    let selectedLng = null;
+    let currentActiveTrip = null;
+
+    // Map Initialization
+    function initMap() {
+      const defaultCenter = [40.7128, -74.0060]; // Default New York or global view
+      map = L.map('setup-map').setView(defaultCenter, 12);
+
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      }).addTo(map);
+
+      map.on('click', async (e) => {
+        setDestinationCoords(e.latlng.lat, e.latlng.lng);
+        const destInput = document.getElementById('destination-input');
+        if (!destInput.value) {
+          const address = await locationService.reverseGeocode(e.latlng.lat, e.latlng.lng);
+          destInput.value = address;
+        }
+      });
+    }
+
+    function setDestinationCoords(lat, lng) {
+      selectedLat = lat;
+      selectedLng = lng;
+
+      if (selectedMarker) {
+        selectedMarker.setLatLng([lat, lng]);
+      } else {
+        selectedMarker = L.marker([lat, lng], { draggable: true }).addTo(map);
+        selectedMarker.on('dragend', (e) => {
+          const pos = e.target.getLatLng();
+          setDestinationCoords(pos.lat, pos.lng);
+        });
+      }
+
+      document.getElementById('coordinates-display').textContent = `Coords: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+      document.getElementById('map-status-pill').textContent = '📍 Destination Pinned';
+    }
+
+    // Geolocation handlers
+    document.getElementById('btn-detect-location')?.addEventListener('click', async () => {
+      showToast('Detecting location with your consent...', 'info');
+      try {
+        const pos = await locationService.getCurrentPosition();
+        map.setView([pos.latitude, pos.longitude], 15);
+        setDestinationCoords(pos.latitude, pos.longitude);
+        document.getElementById('accuracy-display').textContent = `~${pos.accuracy}m`;
+        showToast('Destination pinned to current GPS position.', 'success');
+      } catch (err) {
+        showToast(err.message || 'GPS location unavailable', 'warning');
+      }
+    });
+
+    document.getElementById('btn-start-gps')?.addEventListener('click', async () => {
+      const startInput = document.getElementById('start-location');
+      try {
+        showToast('Acquiring starting coordinates...', 'info');
+        const pos = await locationService.getCurrentPosition();
+        const address = await locationService.reverseGeocode(pos.latitude, pos.longitude);
+        startInput.value = address || `Current Location (${pos.latitude.toFixed(4)}, ${pos.longitude.toFixed(4)})`;
+        showToast('Starting location acquired.', 'success');
+      } catch (err) {
+        showToast(err.message, 'warning');
+      }
+    });
+
+    // Populate contacts dropdown
+    async function loadContactsDropdown() {
+      const select = document.getElementById('trusted-contact-select');
+      try {
+        const contacts = await contactsService.list();
+        if (contacts && contacts.length > 0) {
+          contacts.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.id;
+            opt.textContent = `${c.name} (${c.relationship || 'Contact'}) — ${c.phone}${c.isPrimary ? ' ★ PRIMARY' : ''}`;
+            if (c.isPrimary) opt.selected = true;
+            select.appendChild(opt);
+          });
+        }
+      } catch (err) {
+        console.warn('Could not populate contacts dropdown:', err);
+      }
+    }
+
+    // Initialize battery sensor
+    async function loadBattery() {
+      const batInput = document.getElementById('starting-battery');
+      const tag = document.getElementById('battery-auto-tag');
+      try {
+        const res = await batteryMonitor.init();
+        if (res && res.supported && res.state) {
+          batInput.value = res.state.level;
+          tag.textContent = `Auto-detected (${res.state.level}%)`;
+        } else {
+          tag.textContent = 'Manual entry (API restricted in browser)';
+        }
+      } catch (e) {
+        tag.textContent = 'Manual entry';
+      }
+    }
+
+    // Check for existing active trip
+    async function checkExistingActiveTrip() {
+      const banner = document.getElementById('active-trip-banner');
+      const bannerText = document.getElementById('active-trip-banner-text');
+      const bannerViewBtn = document.getElementById('btn-banner-view');
+      const bannerEndBtn = document.getElementById('btn-banner-end');
+
+      try {
+        const activeTrip = await tripsService.getActive();
+        if (activeTrip) {
+          currentActiveTrip = activeTrip;
+          const name = activeTrip.tripName || activeTrip.title || 'Journey';
+          const dest = typeof activeTrip.destination === 'object' ? activeTrip.destination.name : activeTrip.destination;
+
+          bannerText.textContent = `You have an active trip: "${name}" to ${dest || 'destination'}. Complete or end it before starting a new one.`;
+          bannerViewBtn.href = `trip-status.html?id=${activeTrip.id}`;
+          banner.style.display = 'flex';
+
+          bannerEndBtn.addEventListener('click', async () => {
+            if (!confirm(`Are you sure you want to end "${name}" now?`)) return;
+            bannerEndBtn.disabled = true;
+            try {
+              await tripsService.end(activeTrip.id, { message: 'Ended from trip setup page.' });
+              showToast('Active trip ended successfully.', 'success');
+              banner.style.display = 'none';
+              currentActiveTrip = null;
+            } catch (err) {
+              showToast(err.message || 'Could not end trip', 'error');
+              bannerEndBtn.disabled = false;
+            }
+          });
+        }
+      } catch (e) {
+        console.warn('Could not check active trip:', e);
+      }
+    }
+
+    // Default departure time to now
+    function setDefaultDepartureTime() {
+      const now = new Date();
+      const localIso = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+      const depInput = document.getElementById('departure-time');
+      if (depInput && !depInput.value) {
+        depInput.value = localIso;
+      }
+    }
+
+    // Validate inputs
+    function validateForm() {
+      const destInput = document.getElementById('destination-input');
+      const depInput = document.getElementById('departure-time');
+      const arrInput = document.getElementById('estimated-arrival');
+      const destError = document.getElementById('dest-error');
+      const arrError = document.getElementById('arrival-error');
+      const errorBox = document.getElementById('trip-form-error');
+
+      destError.style.display = 'none';
+      arrError.style.display = 'none';
+      errorBox.style.display = 'none';
+
+      let isValid = true;
+      const destVal = destInput.value.trim();
+
+      if (!destVal) {
+        destError.style.display = 'block';
+        destInput.focus();
+        isValid = false;
+      }
+
+      const depVal = depInput.value ? new Date(depInput.value) : null;
+      const arrVal = arrInput.value ? new Date(arrInput.value) : null;
+
+      if (depVal && arrVal) {
+        if (arrVal.getTime() <= depVal.getTime()) {
+          arrError.style.display = 'block';
+          if (isValid) arrInput.focus();
+          isValid = false;
+        }
+      }
+
+      return isValid;
+    }
+
+    function setSubmitting(isSubmitting, mode = 'start') {
+      const btnSave = document.getElementById('btn-save-planned');
+      const btnStart = document.getElementById('btn-start-now');
+      const saveSpinner = document.getElementById('btn-save-spinner');
+      const startSpinner = document.getElementById('btn-start-spinner');
+      const saveLabel = document.getElementById('btn-save-label');
+      const startLabel = document.getElementById('btn-start-label');
+
+      btnSave.disabled = isSubmitting;
+      btnStart.disabled = isSubmitting;
+
+      if (mode === 'save') {
+        saveSpinner.style.display = isSubmitting ? 'inline-block' : 'none';
+        saveLabel.textContent = isSubmitting ? 'Saving Trip...' : '💾 Save Trip';
+      } else {
+        startSpinner.style.display = isSubmitting ? 'inline-block' : 'none';
+        startLabel.textContent = isSubmitting ? 'Starting Trip...' : '🚀 Start Trip';
+      }
+    }
+
+    async function handleTripSubmission(targetStatus) {
+      if (!validateForm()) return;
+
+      const errorBox = document.getElementById('trip-form-error');
+      const tripName = document.getElementById('trip-name').value.trim();
+      const startLocation = document.getElementById('start-location').value.trim();
+      const destInput = document.getElementById('destination-input').value.trim();
+      const depTime = document.getElementById('departure-time').value;
+      const arrTime = document.getElementById('estimated-arrival').value;
+      const transportMode = document.getElementById('transport-mode').value;
+      const emergencyNotes = document.getElementById('emergency-notes').value.trim();
+      const contactId = document.getElementById('trusted-contact-select').value;
+      const locationConsent = document.getElementById('location-sharing-consent').checked;
+      const battery = document.getElementById('starting-battery').value;
+
+      // Prevent starting a new active trip if one is already active
+      if (targetStatus === 'active' && currentActiveTrip) {
+        errorBox.textContent = `You already have an active journey running ("${currentActiveTrip.tripName || currentActiveTrip.title}"). Please complete or end your active journey before starting another.`;
+        errorBox.style.display = 'block';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+
+      setSubmitting(true, targetStatus === 'active' ? 'start' : 'save');
+
+      const payload = {
+        trip_name: tripName || null,
+        title: tripName || null,
+        start_location: startLocation ? { name: startLocation } : null,
+        destination: {
+          name: destInput,
+          latitude: selectedLat,
+          longitude: selectedLng
+        },
+        departure_time: depTime ? new Date(depTime).toISOString() : new Date().toISOString(),
+        estimated_arrival: arrTime ? new Date(arrTime).toISOString() : null,
+        trusted_contact_id: contactId || null,
+        location_sharing_consent: locationConsent,
+        transport_mode: transportMode,
+        emergency_notes: emergencyNotes,
+        initial_battery: battery ? Number(battery) : null,
+        status: targetStatus
+      };
+
+      try {
+        const saved = await tripsService.create(payload);
+
+        if (targetStatus === 'active') {
+          showToast('Journey started! Opening live status monitor...', 'success');
+          setTimeout(() => {
+            window.location.href = `trip-status.html?id=${saved.id}`;
+          }, 500);
+        } else {
+          showToast('Trip planned and saved successfully!', 'success');
+          setTimeout(() => {
+            window.location.href = 'dashboard.html';
+          }, 500);
+        }
+      } catch (err) {
+        console.error('Trip submission error:', err);
+        errorBox.textContent = err.message || 'Failed to save journey. Please check your inputs.';
+        errorBox.style.display = 'block';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        setSubmitting(false, targetStatus === 'active' ? 'start' : 'save');
+      }
+    }
+
+    // Wire Save Trip button (planned status)
+    document.getElementById('btn-save-planned').addEventListener('click', () => {
+      handleTripSubmission('planned');
+    });
+
+    // Wire Start Trip form submit (active status)
+    document.getElementById('trip-setup-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      handleTripSubmission('active');
+    });
+
+    // Lifecycle setup
+    document.addEventListener('DOMContentLoaded', async () => {
+      const isAuth = await requireAuth();
+      if (!isAuth) return;
+
+      const user = getCurrentUser();
+      const authContainer = document.getElementById('nav-auth-container');
+      if (user && authContainer) {
+        const name = user.displayName || user.email?.split('@')[0] || 'Traveler';
+        const initial = (name.charAt(0) || 'U').toUpperCase();
+        authContainer.innerHTML = `
+          <div class="user-pill">
+            <div class="user-avatar">${escapeHtml(initial)}</div>
+            <span>${escapeHtml(name)}</span>
+          </div>
+          <button type="button" id="btn-header-logout" class="btn btn-sm btn-outline">Log Out</button>
+        `;
+        document.getElementById('btn-header-logout')?.addEventListener('click', async () => {
+          await logout();
+          window.location.href = 'login.html';
+        });
+      }
+
+      initMap();
+      setDefaultDepartureTime();
+      loadContactsDropdown();
+      loadBattery();
+      checkExistingActiveTrip();
+    });
+  </script>
+</body>
+</html>

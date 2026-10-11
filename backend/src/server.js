@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
@@ -75,7 +76,9 @@ if (NODE_ENV === 'development') {
 // Static Assets (Frontend)
 // ==========================================
 // Serving frontend directly enables seamless standalone testing
-const frontendPath = path.resolve(__dirname, '../../frontend');
+const frontendPath = fs.existsSync(path.resolve(__dirname, '../../public'))
+  ? path.resolve(__dirname, '../../public')
+  : path.resolve(__dirname, '../../frontend');
 app.use(express.static(frontendPath));
 
 // ==========================================

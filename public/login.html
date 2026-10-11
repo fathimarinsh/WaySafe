@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Log In — WaySafe</title>
+  <meta name="description" content="Sign in to your WaySafe account to monitor journeys, emergency contacts, and battery safety.">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  <style>
+    .password-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .password-wrapper input {
+      padding-right: 44px;
+    }
+    .btn-toggle-eye {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: transparent;
+      border: none;
+      padding: 6px;
+      cursor: pointer;
+      color: var(--text-muted);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.15s ease;
+    }
+    .btn-toggle-eye:hover,
+    .btn-toggle-eye:focus-visible {
+      color: var(--navy-900);
+      outline: 2px solid var(--teal-500);
+    }
+    .loading-spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: #fff;
+      animation: spin 0.6s linear infinite;
+      margin-right: 8px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Shared Header -->
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="index.html" class="brand-link" id="brand-link">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+        </div>
+        <div class="brand-name">Way<span>Safe</span></div>
+      </a>
+      <div id="nav-auth-container">
+        <a href="signup.html" class="btn btn-sm btn-outline">Need an account? Sign Up</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Login Main -->
+  <main class="main-content" style="display: flex; align-items: center; justify-content: center; min-height: calc(100vh - 200px);">
+    <div class="card" style="max-width: 440px; width: 100%;">
+      <div class="card-header" style="text-align: center; display: block; border-bottom: none; padding-bottom: 0.5rem;">
+        <div style="display: inline-flex; align-items: center; justify-content: center; width: 52px; height: 52px; background: linear-gradient(135deg, var(--navy-900), var(--teal-600)); color: white; border-radius: var(--radius-md); margin-bottom: 0.75rem; box-shadow: var(--shadow-md);">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+        </div>
+        <h1 style="font-size: 1.65rem; margin-bottom: 0.35rem;">Welcome Back</h1>
+        <p class="card-subtitle">Log in to monitor your travel, battery health, and emergency contacts</p>
+      </div>
+
+      <div class="card-body">
+        <!-- Error & Info Alerts -->
+        <div id="login-error-alert" class="alert alert-danger" role="alert" style="display: none;"></div>
+        <div id="login-info-alert" class="alert alert-info" role="status" style="display: none;"></div>
+
+        <form id="login-form" novalidate>
+          <!-- Email Input -->
+          <div class="form-group">
+            <label class="form-label" for="login-email">
+              Email Address <span class="required" aria-hidden="true">*</span>
+            </label>
+            <input
+              type="email"
+              id="login-email"
+              class="form-control"
+              placeholder="alex@example.com"
+              required
+              autocomplete="email"
+              aria-describedby="email-error"
+            >
+            <div id="email-error" class="form-error" role="alert">Please enter a valid email address.</div>
+          </div>
+
+          <!-- Password Input with Show/Hide Toggle -->
+          <div class="form-group">
+            <div style="display: flex; justify-content: space-between; align-items: baseline;">
+              <label class="form-label" for="login-password">
+                Password <span class="required" aria-hidden="true">*</span>
+              </label>
+            </div>
+            <div class="password-wrapper">
+              <input
+                type="password"
+                id="login-password"
+                class="form-control"
+                placeholder="••••••••"
+                required
+                autocomplete="current-password"
+                aria-describedby="password-error"
+              >
+              <button
+                type="button"
+                id="btn-toggle-password"
+                class="btn-toggle-eye"
+                aria-label="Show password"
+                title="Toggle password visibility"
+              >
+                <svg id="eye-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+            <div id="password-error" class="form-error" role="alert">Please enter your password.</div>
+          </div>
+
+          <!-- Remember Session Option -->
+          <label class="checkbox-group" style="margin-bottom: 1.25rem;">
+            <input type="checkbox" id="remember-session" checked>
+            <span class="checkbox-label">
+              <strong>Remember this device</strong> (Keep me signed in across sessions)
+            </span>
+          </label>
+
+          <!-- Submit Button -->
+          <button type="submit" id="btn-login-submit" class="btn btn-primary btn-block btn-lg">
+            <span id="btn-spinner" class="loading-spinner" style="display: none;"></span>
+            <span id="btn-label">Log In</span>
+          </button>
+        </form>
+
+        <div style="margin: 1.5rem 0; text-align: center; position: relative;">
+          <div style="border-top: 1px solid var(--border-subtle); position: absolute; top: 50%; left: 0; right: 0;"></div>
+          <span style="background-color: var(--surface-card); padding: 0 0.75rem; position: relative; font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase;">or instant testing</span>
+        </div>
+
+        <button type="button" id="btn-demo-login" class="btn btn-secondary btn-block">
+          ⚡ Continue as Demo Traveler
+        </button>
+      </div>
+
+      <div class="card-footer" style="justify-content: center; font-size: 0.9rem;">
+        Don't have an account yet?&nbsp;<a href="signup.html">Create free account</a>
+      </div>
+    </div>
+  </main>
+
+  <script type="module">
+    import { login, initAuth, getCurrentUser } from './js/auth.js';
+    import { showToast } from './js/app.js';
+
+    const loginForm = document.getElementById('login-form');
+    const emailInput = document.getElementById('login-email');
+    const passwordInput = document.getElementById('login-password');
+    const rememberCheckbox = document.getElementById('remember-session');
+    const togglePasswordBtn = document.getElementById('btn-toggle-password');
+    const eyeIcon = document.getElementById('eye-icon');
+    const errorAlert = document.getElementById('login-error-alert');
+    const infoAlert = document.getElementById('login-info-alert');
+    const emailError = document.getElementById('email-error');
+    const passwordError = document.getElementById('password-error');
+    const submitBtn = document.getElementById('btn-login-submit');
+    const btnSpinner = document.getElementById('btn-spinner');
+    const btnLabel = document.getElementById('btn-label');
+    const demoBtn = document.getElementById('btn-demo-login');
+
+    // Check redirect query param
+    const urlParams = new URLSearchParams(window.location.search);
+    const redirectTarget = urlParams.get('redirect') || 'dashboard.html';
+
+    // Password Show/Hide Toggle
+    togglePasswordBtn.addEventListener('click', () => {
+      const isPassword = passwordInput.getAttribute('type') === 'password';
+      passwordInput.setAttribute('type', isPassword ? 'text' : 'password');
+      togglePasswordBtn.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
+      if (isPassword) {
+        eyeIcon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
+      } else {
+        eyeIcon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+      }
+    });
+
+    function setLoading(isLoading) {
+      submitBtn.disabled = isLoading;
+      demoBtn.disabled = isLoading;
+      btnSpinner.style.display = isLoading ? 'inline-block' : 'none';
+      btnLabel.textContent = isLoading ? 'Signing in...' : 'Log In';
+    }
+
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorAlert.style.display = 'none';
+      emailError.style.display = 'none';
+      passwordError.style.display = 'none';
+
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
+      const remember = rememberCheckbox.checked;
+
+      // Inline validation
+      let hasError = false;
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+      if (!email || !emailRegex.test(email)) {
+        emailError.style.display = 'block';
+        emailInput.focus();
+        hasError = true;
+      }
+
+      if (!password) {
+        passwordError.style.display = 'block';
+        if (!hasError) passwordInput.focus();
+        hasError = true;
+      }
+
+      if (hasError) return;
+
+      setLoading(true);
+
+      try {
+        await login(email, password, remember);
+        showToast('Login successful! Redirecting...', 'success');
+        setTimeout(() => {
+          window.location.href = redirectTarget;
+        }, 500);
+      } catch (err) {
+        let msg = err.message || 'Authentication failed. Please verify credentials.';
+        if (msg.toLowerCase().includes('invalid login credentials') || msg.toLowerCase().includes('invalid_grant')) {
+          msg = 'Invalid email or password. Please try again.';
+        } else if (msg.toLowerCase().includes('email not confirmed')) {
+          msg = 'Your email address has not been confirmed yet. Please check your inbox for the Supabase confirmation email.';
+        }
+        errorAlert.textContent = msg;
+        errorAlert.style.display = 'block';
+        setLoading(false);
+      }
+    });
+
+    demoBtn.addEventListener('click', async () => {
+      setLoading(true);
+      try {
+        await login('demo@waysafe.local', 'demopassword123', true);
+        showToast('Signed in as Demo Traveler!', 'success');
+        setTimeout(() => {
+          window.location.href = redirectTarget;
+        }, 400);
+      } catch (err) {
+        showToast(err.message, 'error');
+        setLoading(false);
+      }
+    });
+
+    // Check if already authenticated on load
+    document.addEventListener('DOMContentLoaded', async () => {
+      await initAuth();
+      if (getCurrentUser()) {
+        window.location.href = 'dashboard.html';
+      }
+    });
+  </script>
+</body>
+</html>

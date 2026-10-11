@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Emergency Trip Information — WaySafe</title>
+  <meta name="description" content="Public emergency trip information broadcast verified by WaySafe. Provides consented traveler destination, contact, and last known location.">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  <!-- Leaflet CSS for Map Rendering -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <style>
+    :root {
+      --em-red-500: #ef4444;
+      --em-red-600: #dc2626;
+      --em-red-100: #fee2e2;
+      --em-amber-500: #f59e0b;
+      --em-teal-500: #0d9488;
+    }
+    body {
+      background-color: #0f172a;
+      color: #f8fafc;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    .public-header {
+      background: #1e293b;
+      border-bottom: 1px solid #334155;
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, #0d9488, #059669);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      box-shadow: 0 2px 8px rgba(13, 148, 136, 0.4);
+    }
+    .brand-title {
+      font-size: 1.15rem;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      color: #fff;
+    }
+    .brand-subtitle {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .beacon-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.35rem 0.75rem;
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #fca5a5;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .beacon-dot {
+      width: 8px;
+      height: 8px;
+      background-color: #ef4444;
+      border-radius: 50%;
+      animation: pulse-dot 1.8s infinite;
+    }
+    @keyframes pulse-dot {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+      70% { transform: scale(1.2); box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    }
+    .public-container {
+      max-width: 860px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      width: 100%;
+      flex: 1;
+    }
+    .trip-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 16px;
+      padding: 1.75rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+    }
+    .trip-hero {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 1px solid #334155;
+      padding-bottom: 1.25rem;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .traveller-label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #94a3b8;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+    .traveller-name {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: #f8fafc;
+    }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.4rem 0.9rem;
+      border-radius: 9999px;
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+    .status-badge.active {
+      background: rgba(13, 148, 136, 0.2);
+      border: 1px solid #0d9488;
+      color: #2dd4bf;
+    }
+    .status-badge.completed {
+      background: rgba(34, 197, 94, 0.2);
+      border: 1px solid #22c55e;
+      color: #4ade80;
+    }
+    .status-badge.expired {
+      background: rgba(239, 68, 68, 0.2);
+      border: 1px solid #ef4444;
+      color: #f87171;
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+    .info-item {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 1rem;
+    }
+    .info-title {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #94a3b8;
+      font-weight: 700;
+      margin-bottom: 0.35rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .info-value {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #f1f5f9;
+      word-break: break-word;
+    }
+    .info-sub {
+      font-size: 0.75rem;
+      color: #64748b;
+      margin-top: 0.25rem;
+    }
+    /* Contact Box */
+    .contact-card {
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9));
+      border: 1px solid #475569;
+      border-radius: 14px;
+      padding: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+    .contact-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+    .contact-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: #38bdf8;
+      letter-spacing: 0.04em;
+    }
+    .contact-body {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .contact-details {
+      display: flex;
+      flex-direction: column;
+    }
+    .contact-name {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: #fff;
+    }
+    .contact-rel {
+      font-size: 0.8rem;
+      color: #94a3b8;
+    }
+    .contact-phone {
+      font-size: 1.05rem;
+      font-family: monospace;
+      color: #38bdf8;
+      font-weight: 700;
+      margin-top: 0.25rem;
+    }
+    .contact-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .btn-action-call {
+      background: #0284c7;
+      color: #fff;
+      font-weight: 700;
+      padding: 0.65rem 1.2rem;
+      border-radius: 8px;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: background 0.15s ease;
+      font-size: 0.9rem;
+    }
+    .btn-action-call:hover {
+      background: #0369a1;
+    }
+    .btn-action-sms {
+      background: #334155;
+      color: #f1f5f9;
+      font-weight: 700;
+      padding: 0.65rem 1.2rem;
+      border-radius: 8px;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: background 0.15s ease;
+      font-size: 0.9rem;
+    }
+    .btn-action-sms:hover {
+      background: #475569;
+    }
+    /* Map Section */
+    .location-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 14px;
+      padding: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+    .map-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .map-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: #2dd4bf;
+      letter-spacing: 0.04em;
+    }
+    .map-timestamp {
+      font-size: 0.8rem;
+      color: #94a3b8;
+    }
+    #public-map-container {
+      height: 320px;
+      width: 100%;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid #475569;
+      background: #0f172a;
+      z-index: 1;
+    }
+    .map-note {
+      font-size: 0.78rem;
+      color: #94a3b8;
+      margin-top: 0.6rem;
+      line-height: 1.4;
+    }
+    .privacy-notice {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      font-size: 0.8rem;
+      color: #94a3b8;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      line-height: 1.5;
+    }
+    .privacy-icon {
+      font-size: 1.2rem;
+      color: #2dd4bf;
+      flex-shrink: 0;
+    }
+    .expired-card {
+      background: #1e293b;
+      border: 1px solid #dc2626;
+      border-radius: 16px;
+      padding: 2.5rem 1.5rem;
+      text-align: center;
+      margin-top: 2rem;
+      box-shadow: 0 10px 25px -5px rgba(220, 38, 38, 0.2);
+    }
+    .expired-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      display: inline-block;
+    }
+    .expired-title {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #f87171;
+      margin-bottom: 0.75rem;
+    }
+    .expired-desc {
+      font-size: 0.95rem;
+      color: #cbd5e1;
+      max-width: 500px;
+      margin: 0 auto 1.5rem;
+      line-height: 1.5;
+    }
+    .public-footer {
+      text-align: center;
+      padding: 2rem 1rem;
+      font-size: 0.8rem;
+      color: #64748b;
+      border-top: 1px solid #1e293b;
+    }
+    .refresh-bar {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 1rem;
+    }
+    .btn-refresh {
+      background: #334155;
+      color: #f1f5f9;
+      border: 1px solid #475569;
+      padding: 0.45rem 0.9rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: background 0.15s ease;
+    }
+    .btn-refresh:hover {
+      background: #475569;
+    }
+  </style>
+</head>
+<body>
+  <!-- Public Safe Header -->
+  <header class="public-header">
+    <div class="brand-group">
+      <div class="brand-icon">🛡️</div>
+      <div>
+        <div class="brand-title">WaySafe Emergency Beacon</div>
+        <div class="brand-subtitle">Public Traveler Information Broadcast</div>
+      </div>
+    </div>
+    <div class="beacon-pill">
+      <div class="beacon-dot"></div>
+      <span>Emergency Mode</span>
+    </div>
+  </header>
+
+  <main class="public-container">
+    <div class="refresh-bar">
+      <button id="refresh-btn" class="btn-refresh" type="button">
+        🔄 Refresh Status
+      </button>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loading-state" class="trip-card" style="text-align: center; padding: 3rem 1rem;">
+      <div class="spinner" style="margin: 0 auto 1rem;"></div>
+      <p style="color: #94a3b8; font-weight: 600;">Verifying emergency broadcast token...</p>
+    </div>
+
+    <!-- Expired or Invalid State -->
+    <div id="expired-state" class="expired-card" style="display: none;">
+      <div class="expired-icon" id="expired-icon">🔒</div>
+      <h2 class="expired-title" id="expired-title">Journey Concluded or Link Expired</h2>
+      <p class="expired-desc" id="expired-desc">
+        This emergency trip sharing link is no longer active. To protect traveler safety and privacy, public access automatically terminates when a trip ends or the traveler revokes the share token.
+      </p>
+      <div style="font-size: 0.8rem; color: #64748b;">
+        Verified by WaySafe Security Subsystem
+      </div>
+    </div>
+
+    <!-- Active Public Trip Content -->
+    <div id="trip-content" style="display: none;">
+      <!-- Hero Card -->
+      <section class="trip-card">
+        <div class="trip-hero">
+          <div>
+            <div class="traveller-label">Verified Traveler</div>
+            <h1 class="traveller-name" id="traveller-name">WaySafe Traveler</h1>
+            <div style="color: #94a3b8; font-size: 0.85rem; margin-top: 0.25rem;" id="trip-name">Emergency Journey</div>
+          </div>
+          <div>
+            <span class="status-badge active" id="trip-status-badge">
+              <span>●</span> <span id="trip-status-text">Active Journey</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- Trip Details Grid -->
+        <div class="info-grid">
+          <div class="info-item">
+            <div class="info-title">📍 Origin & Departure</div>
+            <div class="info-value" id="origin-val">—</div>
+            <div class="info-sub" id="departure-val">Started: Just now</div>
+          </div>
+          <div class="info-item">
+            <div class="info-title">🏁 Destination</div>
+            <div class="info-value" id="destination-val">—</div>
+            <div class="info-sub" id="transport-mode-val">Mode: Transit</div>
+          </div>
+          <div class="info-item">
+            <div class="info-title">⏰ Expected Arrival (ETA)</div>
+            <div class="info-value" id="eta-val">Not specified</div>
+            <div class="info-sub" id="eta-sub">Explicitly approved for emergency view</div>
+          </div>
+          <div class="info-item">
+            <div class="info-title">⏱️ Last Safety Check-In</div>
+            <div class="info-value" id="checkin-time-val">—</div>
+            <div class="info-sub" id="checkin-relative-val">Recorded by traveler</div>
+          </div>
+        </div>
+
+        <!-- Emergency Notes if provided -->
+        <div id="emergency-notes-container" style="display: none; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 10px; padding: 0.85rem 1rem; margin-top: 1rem;">
+          <div style="font-size: 0.75rem; text-transform: uppercase; color: #fca5a5; font-weight: 700; margin-bottom: 0.2rem;">⚠️ Traveler Safety Note</div>
+          <div id="emergency-notes-val" style="font-size: 0.9rem; color: #fecaca; line-height: 1.4;"></div>
+        </div>
+      </section>
+
+      <!-- Emergency Contact Details (If Approved) -->
+      <section id="contact-section" class="contact-card" style="display: none;">
+        <div class="contact-header">
+          <div class="contact-title">📞 Designated Emergency Contact</div>
+          <span style="font-size: 0.75rem; color: #94a3b8; background: #0f172a; padding: 0.2rem 0.5rem; border-radius: 4px;">Shared by traveler</span>
+        </div>
+        <div class="contact-body">
+          <div class="contact-details">
+            <div class="contact-name" id="contact-name-val">—</div>
+            <div class="contact-rel" id="contact-rel-val">Trusted Contact</div>
+            <div class="contact-phone" id="contact-phone-val">—</div>
+          </div>
+          <div class="contact-actions">
+            <a id="btn-call-contact" href="#" class="btn-action-call">
+              📞 Call Now
+            </a>
+            <a id="btn-sms-contact" href="#" class="btn-action-sms">
+              💬 Send SMS
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- Last Known Location (If Approved & Recorded) -->
+      <section class="location-card">
+        <div class="map-header">
+          <div class="map-title">📍 Last Known Recorded Location</div>
+          <div class="map-timestamp" id="location-timestamp-val">Awaiting traveler check-in</div>
+        </div>
+
+        <div id="location-available-view" style="display: none;">
+          <div id="public-map-container"></div>
+          <div class="map-note">
+            <strong>Notice:</strong> This map reflects the traveler's <em>last known recorded check-in</em>. WaySafe strictly respects privacy and never fabricates continuous live GPS tracking when the app is backgrounded or idle.
+          </div>
+          <div style="margin-top: 0.75rem; display: flex; gap: 0.5rem;">
+            <a id="external-map-link" href="#" target="_blank" rel="noopener noreferrer" class="btn-refresh" style="text-decoration: none; font-size: 0.8rem;">
+              🗺️ Open in Google Maps
+            </a>
+          </div>
+        </div>
+
+        <div id="location-unavailable-view" style="background: #0f172a; border: 1px dashed #475569; border-radius: 10px; padding: 2rem 1rem; text-align: center;">
+          <div style="font-size: 1.8rem; margin-bottom: 0.5rem;">📡</div>
+          <div style="font-weight: 700; color: #cbd5e1; font-size: 0.95rem;" id="location-unavailable-msg">
+            Location updates are either disabled by the traveler or pending check-in.
+          </div>
+          <div style="font-size: 0.8rem; color: #64748b; margin-top: 0.35rem;">
+            Only explicitly consented coordinates are displayed.
+          </div>
+        </div>
+      </section>
+
+      <!-- Privacy & Protection Guarantee -->
+      <div class="privacy-notice">
+        <div class="privacy-icon">🛡️</div>
+        <div>
+          <strong>Privacy & Security Protection:</strong>
+          This public view is restricted to emergency details explicitly authorized by the traveler. Account credentials, private home addresses, passwords, phone access tokens, and other journey history remain strictly confidential.
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="public-footer">
+    <div>WaySafe Traveler Protection Platform &copy; 2026. All rights reserved.</div>
+    <div style="margin-top: 0.35rem; font-size: 0.75rem; color: #475569;">
+      Emergency broadcasts are cryptographically unguessable and can be revoked by the traveler at any moment.
+    </div>
+  </footer>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script type="module">
+    import { api } from './js/api.js';
+
+    let mapInstance = null;
+    let markerInstance = null;
+    let circleInstance = null;
+
+    // Parse share token from query string
+    function getToken() {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get('token');
+    }
+
+    function formatTime(isoStr) {
+      if (!isoStr) return '—';
+      try {
+        const d = new Date(isoStr);
+        if (isNaN(d.getTime())) return isoStr;
+        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      } catch (e) {
+        return isoStr;
+      }
+    }
+
+    function formatRelative(isoStr) {
+      if (!isoStr) return '';
+      try {
+        const d = new Date(isoStr);
+        if (isNaN(d.getTime())) return '';
+        const diffMs = Date.now() - d.getTime();
+        const mins = Math.floor(diffMs / 60000);
+        if (mins < 1) return 'Just now';
+        if (mins === 1) return '1 minute ago';
+        if (mins < 60) return `${mins} minutes ago`;
+        const hrs = Math.floor(mins / 60);
+        return `${hrs} hour${hrs > 1 ? 's' : ''} ago`;
+      } catch (e) {
+        return '';
+      }
+    }
+
+    async function loadPublicTrip() {
+      const token = getToken();
+      const loadingEl = document.getElementById('loading-state');
+      const expiredEl = document.getElementById('expired-state');
+      const contentEl = document.getElementById('trip-content');
+
+      if (!token) {
+        loadingEl.style.display = 'none';
+        contentEl.style.display = 'none';
+        expiredEl.style.display = 'block';
+        document.getElementById('expired-icon').textContent = '⚠️';
+        document.getElementById('expired-title').textContent = 'Missing Emergency Token';
+        document.getElementById('expired-desc').textContent = 'No emergency broadcast token was found in the link. Please scan a valid WaySafe Emergency Trip QR code.';
+        return;
+      }
+
+      loadingEl.style.display = 'block';
+      expiredEl.style.display = 'none';
+      contentEl.style.display = 'none';
+
+      try {
+        const res = await api.trips.getPublicShare(token);
+        const trip = res.data;
+
+        loadingEl.style.display = 'none';
+        contentEl.style.display = 'block';
+
+        // Render traveler name & trip
+        document.getElementById('traveller-name').textContent = trip.travellerName || 'WaySafe Traveler';
+        document.getElementById('trip-name').textContent = trip.tripName || 'Emergency Journey';
+
+        // Status badge
+        const badgeEl = document.getElementById('trip-status-badge');
+        const badgeText = document.getElementById('trip-status-text');
+        if (trip.status === 'active') {
+          badgeEl.className = 'status-badge active';
+          badgeText.textContent = 'Active Emergency Travel';
+        } else if (trip.status === 'completed') {
+          badgeEl.className = 'status-badge completed';
+          badgeText.textContent = 'Completed Safely';
+        } else {
+          badgeEl.className = 'status-badge';
+          badgeText.textContent = trip.status.toUpperCase();
+        }
+
+        // Trip details
+        document.getElementById('origin-val').textContent = trip.startLocation || 'Not disclosed';
+        document.getElementById('destination-val').textContent = trip.destination || 'Not disclosed';
+        document.getElementById('transport-mode-val').textContent = `Mode: ${(trip.transportMode || 'transit').toUpperCase()}`;
+
+        if (trip.departureTime || trip.startedAt) {
+          const startTime = trip.startedAt || trip.departureTime;
+          document.getElementById('departure-val').textContent = `Started: ${formatTime(startTime)} (${formatRelative(startTime)})`;
+        }
+
+        if (trip.estimatedArrival) {
+          document.getElementById('eta-val').textContent = formatTime(trip.estimatedArrival);
+          document.getElementById('eta-sub').textContent = `ETA: ${formatRelative(trip.estimatedArrival)}`;
+        } else {
+          document.getElementById('eta-val').textContent = 'Not specified';
+          document.getElementById('eta-sub').textContent = 'ETA hidden or not set';
+        }
+
+        if (trip.lastCheckInAt) {
+          document.getElementById('checkin-time-val').textContent = formatTime(trip.lastCheckInAt);
+          document.getElementById('checkin-relative-val').textContent = formatRelative(trip.lastCheckInAt);
+        } else {
+          document.getElementById('checkin-time-val').textContent = 'No check-ins yet';
+          document.getElementById('checkin-relative-val').textContent = 'Awaiting traveler confirmation';
+        }
+
+        // Emergency Notes
+        const notesContainer = document.getElementById('emergency-notes-container');
+        if (trip.emergencyNotes && trip.emergencyNotes.trim()) {
+          notesContainer.style.display = 'block';
+          document.getElementById('emergency-notes-val').textContent = trip.emergencyNotes;
+        } else {
+          notesContainer.style.display = 'none';
+        }
+
+        // Contact Section
+        const contactSec = document.getElementById('contact-section');
+        if (trip.emergencyContact && trip.emergencyContact.phone) {
+          contactSec.style.display = 'block';
+          document.getElementById('contact-name-val').textContent = trip.emergencyContact.name || 'Emergency Contact';
+          document.getElementById('contact-rel-val').textContent = trip.emergencyContact.relationship || 'Trusted Contact';
+          document.getElementById('contact-phone-val').textContent = trip.emergencyContact.phone;
+          document.getElementById('btn-call-contact').href = `tel:${trip.emergencyContact.phone}`;
+          document.getElementById('btn-sms-contact').href = `sms:${trip.emergencyContact.phone}`;
+        } else {
+          contactSec.style.display = 'none';
+        }
+
+        // Location Section
+        renderLocation(trip.lastLocation);
+
+      } catch (err) {
+        loadingEl.style.display = 'none';
+        contentEl.style.display = 'none';
+        expiredEl.style.display = 'block';
+
+        if (err.status === 410) {
+          document.getElementById('expired-icon').textContent = '🛑';
+          document.getElementById('expired-title').textContent = 'Emergency Trip Sharing Ended';
+          document.getElementById('expired-desc').textContent = err.message || 'This trip has either completed, reached expiration, or the sharing link was revoked by the traveler.';
+        } else if (err.status === 404) {
+          document.getElementById('expired-icon').textContent = '🔍';
+          document.getElementById('expired-title').textContent = 'Emergency Link Not Found';
+          document.getElementById('expired-desc').textContent = 'No active emergency journey matches this QR code or URL.';
+        } else {
+          document.getElementById('expired-icon').textContent = '⚠️';
+          document.getElementById('expired-title').textContent = 'Unable to Load Emergency Broadcast';
+          document.getElementById('expired-desc').textContent = err.message || 'A network error occurred while verifying the emergency link.';
+        }
+      }
+    }
+
+    function renderLocation(lastLoc) {
+      const availView = document.getElementById('location-available-view');
+      const unavailView = document.getElementById('location-unavailable-view');
+      const tsEl = document.getElementById('location-timestamp-val');
+
+      if (!lastLoc || !lastLoc.latitude || !lastLoc.longitude) {
+        availView.style.display = 'none';
+        unavailView.style.display = 'block';
+        tsEl.textContent = 'No coordinates recorded';
+        return;
+      }
+
+      availView.style.display = 'block';
+      unavailView.style.display = 'none';
+
+      const lat = Number(lastLoc.latitude);
+      const lng = Number(lastLoc.longitude);
+      const accuracy = lastLoc.accuracy ? Math.round(Number(lastLoc.accuracy)) : null;
+      const recTime = lastLoc.recordedAt;
+
+      tsEl.textContent = `Recorded: ${formatTime(recTime)} (${formatRelative(recTime)})`;
+      document.getElementById('external-map-link').href = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+
+      // Initialize or update Leaflet map
+      setTimeout(() => {
+        if (!mapInstance) {
+          mapInstance = L.map('public-map-container', {
+            zoomControl: true,
+            scrollWheelZoom: false
+          }).setView([lat, lng], 15);
+
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 19
+          }).addTo(mapInstance);
+
+          // Custom pin icon
+          const pinHtml = `
+            <div style="background: #dc2626; color: #fff; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; border: 3px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
+              📍
+            </div>
+          `;
+          const customIcon = L.divIcon({
+            html: pinHtml,
+            className: '',
+            iconSize: [34, 34],
+            iconAnchor: [17, 34],
+            popupAnchor: [0, -34]
+          });
+
+          markerInstance = L.marker([lat, lng], { icon: customIcon }).addTo(mapInstance);
+          markerInstance.bindPopup(`<b>Last Recorded Location</b><br>Accuracy: ~${accuracy || 20}m<br>Time: ${formatTime(recTime)}`).openPopup();
+
+          if (accuracy && accuracy < 1000) {
+            circleInstance = L.circle([lat, lng], {
+              radius: accuracy,
+              color: '#dc2626',
+              fillColor: '#dc2626',
+              fillOpacity: 0.15,
+              weight: 1
+            }).addTo(mapInstance);
+          }
+        } else {
+          mapInstance.setView([lat, lng], 15);
+          if (markerInstance) markerInstance.setLatLng([lat, lng]);
+          if (circleInstance && accuracy) {
+            circleInstance.setLatLng([lat, lng]);
+            circleInstance.setRadius(accuracy);
+          }
+          mapInstance.invalidateSize();
+        }
+      }, 100);
+    }
+
+    document.getElementById('refresh-btn').addEventListener('click', () => {
+      loadPublicTrip();
+    });
+
+    // Auto-load on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      loadPublicTrip();
+    });
+  </script>
+</body>
+</html>
