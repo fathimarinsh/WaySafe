@@ -333,9 +333,12 @@
       } catch (err) {
         let msg = err.message || 'Registration failed. Please try again.';
         if (msg.toLowerCase().includes('already registered') || msg.toLowerCase().includes('user already exists')) {
-          msg = 'An account with this email already exists. Please log in instead.';
+          errorAlert.innerHTML = 'An account with this email already exists. <a href="login.html" style="text-decoration: underline; font-weight: 600;">Click here to log in</a>.';
+        } else if (msg.toLowerCase().includes('rate limit') || msg.toLowerCase().includes('rate_limit')) {
+          errorAlert.innerHTML = '<strong>Email rate limit exceeded:</strong> Supabase free email quota reached (3/hour). To enable instant signups without email limits, disable <em>"Confirm email"</em> in your Supabase Dashboard (<strong>Authentication &rarr; Providers &rarr; Email</strong>).';
+        } else {
+          errorAlert.textContent = msg;
         }
-        errorAlert.textContent = msg;
         errorAlert.style.display = 'block';
         setLoading(false);
       }
