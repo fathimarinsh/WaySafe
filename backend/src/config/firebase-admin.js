@@ -40,18 +40,9 @@ try {
       projectId
     });
     console.log('[Firebase Admin] Successfully initialized with environment credentials.');
-  } else {
-    // No credentials provided
-    if (process.env.ALLOW_DEV_MOCK_AUTH === 'true' || process.env.NODE_ENV !== 'production') {
-      console.warn('------------------------------------------------------------');
-      console.warn('[Firebase Admin Warning] No live Firebase Admin credentials provided.');
-      console.warn('Running with Mock/Development fallback database.');
-      console.warn('To connect live Firestore and Firebase Auth, see README.md.');
-      console.warn('------------------------------------------------------------');
-      isMockMode = true;
-    } else {
-      throw new Error('Firebase Admin credentials are required in production mode.');
-    }
+    // No credentials provided (Using Supabase as primary database)
+    console.warn('[Firebase Notice] Supabase is primary backend. Firebase Admin credentials omitted.');
+    isMockMode = true;
   }
 
   if (!isMockMode) {
@@ -59,13 +50,8 @@ try {
     auth = admin.auth();
   }
 } catch (error) {
-  console.error('[Firebase Admin Init Error]:', error.message);
-  if (process.env.ALLOW_DEV_MOCK_AUTH === 'true' || process.env.NODE_ENV !== 'production') {
-    console.warn('[Firebase Admin] Falling back to Mock/Development mode due to initialization error.');
-    isMockMode = true;
-  } else {
-    throw error;
-  }
+  console.warn('[Firebase Notice] Supabase primary mode active. Firebase admin skipped:', error.message);
+  isMockMode = true;
 }
 
 export { admin, db, auth, isMockMode };
